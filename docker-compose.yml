@@ -4,13 +4,15 @@ services:
   lazyautomation:
     build: .
     ports:
-      - "3000:3000"
+      - "${PORT:-3002}:3000"
     env_file:
       - .env
-    volumes:
-      - .:/app
-      - /app/node_modules
     environment:
       - NODE_ENV=development
+      - PORT=3000
+      - REACT_APP_HASS_HOST=${REACT_APP_HASS_HOST}
+      - REACT_APP_HASS_TOKEN=${REACT_APP_HASS_TOKEN}
+      - REACT_APP_OLLAMA_HOST=${REACT_APP_OLLAMA_HOST}
+      - REACT_APP_APP_URL=${REACT_APP_APP_URL}
     stdin_open: true
     tty: true

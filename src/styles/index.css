@@ -11,6 +11,19 @@
   --danger-color: #ff3b30;
 }
 
+[data-theme="dark"] {
+  --primary-color: #0a84ff;
+  --secondary-color: #5e5ce6;
+  --background-color: #000000;
+  --card-background: #1c1c1e;
+  --text-primary: #ffffff;
+  --text-secondary: #8e8e93;
+  --border-color: #38383a;
+  --success-color: #30d158;
+  --warning-color: #ff9f0a;
+  --danger-color: #ff453a;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -25,6 +38,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background-color);
   color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app {
@@ -40,12 +54,74 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .header h1 {
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.connected {
+  background-color: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+}
+
+.status-indicator.disconnected {
+  background-color: var(--danger-color);
+}
+
+.status-indicator.connecting {
+  background-color: var(--warning-color);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  color: var(--text-primary);
+}
+
+.theme-toggle:hover {
+  background-color: var(--background-color);
 }
 
 .main-content {
@@ -62,6 +138,7 @@ body {
   padding: 20px;
   margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .room-selector h2 {
@@ -119,6 +196,7 @@ body {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .dashboard-card h3 {
@@ -140,6 +218,7 @@ body {
   align-items: center;
   padding: 12px;
   border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .sensor-item:last-child, .appliance-item:last-child, .automation-item:last-child {
@@ -193,6 +272,14 @@ body {
 @media (max-width: 768px) {
   .header h1 {
     font-size: 22px;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+
+  .connection-status {
+    font-size: 12px;
   }
 
   .room-grid {

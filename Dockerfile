@@ -1,5 +1,7 @@
 FROM node:20-alpine
 
+ARG PORT=3002
+
 WORKDIR /app
 
 RUN apk add --no-cache curl
@@ -10,6 +12,6 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE ${PORT}
 
 CMD ["npm", "start"]

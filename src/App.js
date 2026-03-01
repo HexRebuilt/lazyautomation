@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations } from './services/homeAssistant';
+import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, checkHassConnection } from './services/homeAssistant';
+import { checkOllamaConnection } from './services/ollama';
+import useTheme from './hooks/useTheme';
+import Header from './components/Header';
 import RoomSelector from './components/RoomSelector';
 import Dashboard from './components/Dashboard';
 import './styles/index.css';
 
 function App() {
+  const { theme, toggleTheme } = useTheme();
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sensors, setSensors] = useState([]);
@@ -12,6 +16,21 @@ function App() {
   const [automations, setAutomations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hassStatus, setHassStatus] = useState('connecting');
+  const [ollamaStatus, setOllamaStatus] = useState('connecting');
+
+  useEffect(() => {
+    const checkConnections = async () => {
+      const hass = await checkHassConnection();
+      setHassStatus(hass.connected ? 'connected' : 'disconnected');
+
+      const ollama = await checkOllamaConnection();
+      setOllamaStatus(ollama.connected ? 'connected' : 'disconnected');
+    };
+    checkConnections();
+    const interval = setInterval(checkConnections, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const loadRooms = async () => {
@@ -60,9 +79,12 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>LazyAutomation</h1>
-      </header>
+      <Header 
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        hassStatus={hassStatus}
+        ollamaStatus={ollamaStatus}
+      />
       
       <main className="main-content">
         {error && <div className="error-message">{error}</div>}

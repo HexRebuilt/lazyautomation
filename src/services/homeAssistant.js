@@ -20,7 +20,6 @@ export const fetchRooms = async () => {
     const processedEntities = new Set();
     
     states.forEach(state => {
-      const entityId = state.entity_id;
       const attributes = state.attributes;
       
       if (attributes?.area_id && !processedEntities.has(attributes.area_id)) {
@@ -125,6 +124,18 @@ export const fetchAutomations = async (room) => {
   } catch (error) {
     console.error('Error fetching automations:', error);
     throw error;
+  }
+};
+
+export const checkHassConnection = async () => {
+  try {
+    await hassApi.get('/');
+    return { connected: true, error: null };
+  } catch (error) {
+    return { 
+      connected: false, 
+      error: error.message || 'Connection failed' 
+    };
   }
 };
 
