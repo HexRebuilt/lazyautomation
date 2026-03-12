@@ -79,8 +79,12 @@ export const fetchRooms = async () => {
     }
     
     // Priority 2: Use area_id OR room_id from entity attributes
+    console.log('===== STARTING ROOM DETECTION =====');
     console.log('Trying area_id and room_id from entity attributes...');
-    console.log('Sample entity attributes:', states.slice(0, 3).map(s => ({ entity_id: s.entity_id, area_id: s.attributes?.area_id, room_id: s.attributes?.room_id, attributes: Object.keys(s.attributes || {}) })));
+    
+    // Find ALL entities with room_id
+    const roomIdEntities = states.filter(s => s.attributes?.room_id);
+    console.log('Entities with room_id:', roomIdEntities.map(e => ({ entity: e.entity_id, room_id: e.attributes.room_id })));
     
     // Map room_id to room names (based on what we found in your HA)
     const roomIdToName = {
@@ -91,6 +95,7 @@ export const fetchRooms = async () => {
       7: 'Bathroom'
     };
     
+    // First pass: collect rooms from area_id/room_id attributes
     states.forEach(state => {
       const areaId = state.attributes?.area_id;
       const roomId = state.attributes?.room_id;
@@ -105,81 +110,87 @@ export const fetchRooms = async () => {
           icon: getRoomIcon(areaId)
         });
       }
-      // Otherwise use room_id if available
-      else if (roomId && !roomSet.has('room_' + roomId)) {
-        const roomName = roomIdToName[roomId] || `Room ${roomId}`;
-        console.log('Found room_id:', roomId, '->', roomName, 'from entity:', state.entity_id);
-        roomSet.add('room_' + roomId);
-        rooms.push({
-          id: 'room_' + roomId,
-          name: roomName,
-          icon: getRoomIcon(roomName.toLowerCase().replace(' ', '_'))
-        });
+      // Otherwise use room_id if available (but skip vacuum rooms)
+      else if (roomId !== undefined && roomId !== null && !roomSet.has('room_' + roomId)) {
+        // Skip vacuum room_ids - they don't represent actual house areas
+        if (!['1', '2', '3', '4', '7'].includes(String(roomId))) {
+          const roomName = roomIdToName[roomId] || `Room ${roomId}`;
+          console.log('Found room_id:', roomId, '->', roomName, 'from entity:', state.entity_id);
+          roomSet.add('room_' + roomId);
+          rooms.push({
+            id: 'room_' + roomId,
+            name: roomName,
+            icon: getRoomIcon(roomName.toLowerCase().replace(' ', '_'))
+          });
+        }
       }
     });
     
-    // If we found rooms from area_id, return them
-    if (rooms.length > 0) {
-      rooms.sort((a, b) => a.name.localeCompare(b.name));
-      return rooms;
-    }
+    console.log('Rooms found after attribute detection:', rooms);
     
-    // Priority 3: Extract from entity IDs as LAST RESORT fallback
-    console.log('Falling back to entity ID parsing...');
-    const knownDomains = new Set([
-      'sensor', 'switch', 'light', 'binary_sensor', 'climate', 'fan', 'cover', 'lock',
-      'automation', 'scene', 'script', 'input_boolean', 'input_number', 'input_text',
-      'input_select', 'input_datetime', 'device_tracker', 'person', 'group', 'zone',
-      'weather', 'calendar', 'camera', 'media_player', 'vacuum', 'water_heater',
-      'humidifier', 'deconz', 'zha', 'zigbee', 'mqtt', 'tasmota', 'esphome', 'shelly',
-      'hue', 'tradfri', 'ikea', 'sonos', 'alexa', 'google', 'homekit', 'nest',
-      'remote', 'tv', 'receiver', 'update', 'select', 'number', 'button', 'text'
-    ]);
+    // Priority 3: Extract from entity IDs - include Italian room names
+    console.log('Extracting rooms from entity IDs...');
     
-    // Common room names to look for in entity IDs
-    const knownRooms = new Set([
-      'living_room', 'bedroom', 'kitchen', 'bathroom', 'office', 'garage', 'garden',
-      'hallway', 'dining', 'basement', 'attic', 'laundry', 'closet', 'patio',
-      'balcony', 'stairs', 'entry', 'foyer', 'den', 'playroom', 'gym', 'workshop'
-    ]);
+    // Room name mappings (English and Italian)
+    const roomMappings = {
+      // English
+      'living_room': 'Living Room',
+      'bedroom': 'Bedroom',
+      'kitchen': 'Kitchen',
+      'bathroom': 'Bathroom',
+      'office': 'Office',
+      'garage': 'Garage',
+      'garden': 'Garden',
+      'hallway': 'Hallway',
+      'dining': 'Dining Room',
+      'basement': 'Basement',
+      'attic': 'Attic',
+      'laundry': 'Laundry',
+      // Italian
+      'soggiorno': 'Living Room',
+      'camera_da_letto': 'Bedroom',
+      'cucina': 'Kitchen',
+      'bagno': 'Bathroom',
+      'ufficio': 'Office',
+      'garage': 'Garage',
+      'giardino': 'Garden',
+      'corridoio': 'Hallway',
+      'sala': 'Living Room',
+      'veranda': 'Veranda',
+      'box': 'Box',
+      'soffitta': 'Attic',
+      'cantina': 'Basement',
+      'lavanderia': 'Laundry',
+      'studio': 'Office',
+      'server': 'Server'
+    };
     
     states.forEach(state => {
-      const entityId = state.entity_id;
+      const entityId = state.entity_id.toLowerCase();
       const parts = entityId.split('.');
       if (parts.length >= 2) {
-        const domain = parts[0];
-        const entityName = parts[1].toLowerCase();
+        const entityName = parts[1];
         
-        // Skip known domains (they would be wrong as room names)
-        if (knownDomains.has(domain)) return;
-        
-        // Check if entity name matches a known room
-        if (knownRooms.has(entityName)) {
-          if (!roomSet.has(entityName)) {
-            roomSet.add(entityName);
-            rooms.push({
-              id: entityName,
-              name: entityName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-              icon: getRoomIcon(entityName)
-            });
-          }
-        }
-        
-        // Also check: does the entity name START with a known room?
-        for (const room of knownRooms) {
-          if (entityName.startsWith(room) && (entityName === room || entityName[room.length] === '_')) {
-            if (!roomSet.has(room)) {
-              roomSet.add(room);
+        // Check if entity name matches any known room
+        for (const [roomKey, roomName] of Object.entries(roomMappings)) {
+          // Match exact or with underscore prefix
+          if (entityName === roomKey || entityName.startsWith(roomKey + '_') || entityName.includes('_' + roomKey + '_')) {
+            if (!roomSet.has(roomKey)) {
+              console.log('Found room from entity ID:', entityId, '->', roomKey, '=', roomName);
+              roomSet.add(roomKey);
               rooms.push({
-                id: room,
-                name: room.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-                icon: getRoomIcon(room)
+                id: roomKey,
+                name: roomName,
+                icon: getRoomIcon(roomKey)
               });
             }
           }
         }
       }
     });
+    
+    console.log('Rooms found after entity ID detection:', rooms);
+    console.log('===== END ROOM DETECTION =====');
     
     // Sort rooms alphabetically
     rooms.sort((a, b) => a.name.localeCompare(b.name));
