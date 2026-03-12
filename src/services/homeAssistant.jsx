@@ -313,11 +313,13 @@ export const fetchAppliances = async (room) => {
 
 export const fetchAutomations = async (room) => {
   try {
-    const automations = await hassFetch('/automations');
+    // Get all states and filter for automation entities
+    const states = await hassFetch('/states');
+    const automationEntities = states.filter(s => s.entity_id.startsWith('automation.'));
     
-    const roomAutomations = automations
+    const roomAutomations = automationEntities
       .filter(automation => {
-        const alias = automation.alias || '';
+        const alias = automation.attributes?.friendly_name || automation.entity_id;
         // Match by room name or room id in the alias
         const roomName = room.name.toLowerCase();
         const roomId = room.id.toLowerCase();
@@ -326,10 +328,10 @@ export const fetchAutomations = async (room) => {
                alias.toLowerCase().includes(roomId.replace(/_/g, ' '));
       })
       .map(automation => ({
-        id: automation.id,
-        name: automation.alias || automation.id,
-        state: automation.enabled ? 'enabled' : 'disabled',
-        lastTriggered: automation.last_triggered
+        id: automation.entity_id,
+        name: automation.attributes?.friendly_name || automation.entity_id,
+        state: automation.state === 'on' ? 'enabled' : 'disabled',
+        lastTriggered: automation.attributes?.last_triggered
       }));
     
     return roomAutomations;
@@ -342,13 +344,15 @@ export const fetchAutomations = async (room) => {
 // Fetch all automations grouped by room
 export const fetchAllAutomations = async () => {
   try {
-    const automations = await hassFetch('/automations');
+    // Get all states and filter for automation entities
+    const states = await hassFetch('/states');
+    const automationEntities = states.filter(s => s.entity_id.startsWith('automation.'));
     
-    // Group automations by room based on their alias
+    // Group automations by room based on their alias/name
     const grouped = {};
     
-    automations.forEach(automation => {
-      const alias = automation.alias || 'Unknown';
+    automationEntities.forEach(automation => {
+      const alias = automation.attributes?.friendly_name || automation.entity_id;
       let roomName = 'Other';
       
       // Try to extract room from alias (e.g., "Turn on living room lights" -> "living room")
@@ -365,10 +369,10 @@ export const fetchAllAutomations = async () => {
       }
       
       grouped[roomName].push({
-        id: automation.id,
+        id: automation.entity_id,
         name: alias,
-        state: automation.enabled ? 'enabled' : 'disabled',
-        lastTriggered: automation.last_triggered
+        state: automation.state === 'on' ? 'enabled' : 'disabled',
+        lastTriggered: automation.attributes?.last_triggered
       });
     });
     

@@ -28,3 +28,9 @@
    - [ ] Ensure all sensitive data is stored in the .env file.
    - [ ] Follow security best practices for storing API keys and tokens.
    - [ ] Address any security issues found during testing and deployment.
+
+6. **Localization:**
+   - [ ] Add localization support for room names (English, Italian, Spanish, etc.)
+   - [ ] Use REACT_APP_LOCALE env variable to set the display language
+   - [ ] Support multiple language packs for room name translations
+   - [ ] Allow LLM-powered translation using local Ollama/LMStudio
