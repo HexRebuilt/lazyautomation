@@ -39,7 +39,7 @@ export const fetchRooms = async () => {
     const rooms = [];
     const roomSet = new Set();
     
-    // Priority 1: Use areas from HA API
+    // Priority 1: Use areas from HA API (MOST RELIABLE)
     if (areas && areas.length > 0) {
       areas.forEach(area => {
         if (!roomSet.has(area.area_id)) {
@@ -53,7 +53,7 @@ export const fetchRooms = async () => {
       });
     }
     
-    // Priority 2: Use area_id from entity attributes (proper HA way)
+    // Priority 2: Use area_id from entity attributes (also reliable)
     states.forEach(state => {
       const areaId = state.attributes?.area_id;
       if (areaId && !roomSet.has(areaId)) {
@@ -66,38 +66,74 @@ export const fetchRooms = async () => {
       }
     });
     
-    // Priority 3: Try to extract room from entity IDs as fallback
-    // Pattern: domain.room_name.something (e.g., light.kitchen.ceiling)
+    // If we found real rooms from areas, return them (don't pollute with entity ID parsing)
+    if (rooms.length > 0) {
+      return rooms;
+    }
+    
+    // Priority 3: Extract from entity IDs as LAST RESORT fallback
+    // Only do this if no areas were found at all
+    const knownDomains = new Set([
+      'sensor', 'switch', 'light', 'binary_sensor', 'climate', 'fan', 'cover', 'lock',
+      'automation', 'scene', 'script', 'input_boolean', 'input_number', 'input_text',
+      'input_select', 'input_datetime', 'device_tracker', 'person', 'group', 'zone',
+      'weather', 'calendar', 'camera', 'media_player', 'vacuum', 'water_heater',
+      'humidifier', 'deconz', 'zha', 'zigbee', 'mqtt', 'tasmota', 'esphome', 'shelly',
+      'hue', 'tradfri', 'ikea', 'sonos', 'alexa', 'google', 'homekit', 'nest',
+      'remote', 'tv', 'receiver', 'update', 'select', 'number', 'button', 'text'
+    ]);
+    
+    // Common room names to look for in entity IDs
+    const knownRooms = new Set([
+      'living_room', 'bedroom', 'kitchen', 'bathroom', 'office', 'garage', 'garden',
+      'hallway', 'dining', 'basement', 'attic', 'laundry', 'closet', 'patio',
+      'balcony', 'stairs', 'entry', 'foyer', 'den', 'playroom', 'gym', 'workshop'
+    ]);
+    
     states.forEach(state => {
       const entityId = state.entity_id;
       const parts = entityId.split('.');
       if (parts.length >= 2) {
-        const roomPart = parts[1];
-        // Only use if it looks like a valid room name (not a domain/type)
-        const commonTypes = ['sensor', 'switch', 'light', 'binary_sensor', 'climate', 
-          'fan', 'cover', 'lock', 'automation', 'scene', 'script', 'input_', 'binary_',
-          'device_tracker', 'person', 'group', 'zone', 'weather', 'calendar', 'camera',
-          'media_player', 'vacuum', 'water_heater', 'humidifier', 'deconz', 'zha', 'zigbee'];
+        const domain = parts[0];
+        const entityName = parts[1].toLowerCase();
         
-        // Skip if it's a common domain type
-        if (commonTypes.includes(roomPart)) return;
+        // Skip known domains (they would be wrong as room names)
+        if (knownDomains.has(domain)) return;
         
-        // Skip if it looks like an entity ID (has multiple underscores that might be a name)
-        if (roomPart.includes('__') || roomPart.startsWith('group.') || roomPart.startsWith('scene.')) return;
+        // Skip if it looks like a device name (has multiple parts separated by _)
+        // e.g., "esp32_bedroom_sensor" - the entity name part should be simple
         
-        // Accept room names that are reasonable length and don't have weird patterns
-        if (roomPart.length >= 2 && roomPart.length <= 30 && !roomPart.match(/^[0-9]+$/)) {
-          if (!roomSet.has(roomPart)) {
-            roomSet.add(roomPart);
+        // Check if entity name matches a known room
+        if (knownRooms.has(entityName)) {
+          if (!roomSet.has(entityName)) {
+            roomSet.add(entityName);
             rooms.push({
-              id: roomPart,
-              name: roomPart.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-              icon: getRoomIcon(roomPart)
+              id: entityName,
+              name: entityName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+              icon: getRoomIcon(entityName)
             });
+          }
+        }
+        
+        // Also check: does the entity name START with a known room?
+        // e.g., "livingroom_switch" -> room = "livingroom"
+        for (const room of knownRooms) {
+          if (entityName.startsWith(room) && (entityName === room || entityName[room.length] === '_')) {
+            if (!roomSet.has(room)) {
+              roomSet.add(room);
+              rooms.push({
+                id: room,
+                name: room.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                icon: getRoomIcon(room)
+              });
+            }
           }
         }
       }
     });
+    
+    // Sort rooms alphabetically
+    rooms.sort((a, b) => a.name.localeCompare(b.name));
     
     if (rooms.length === 0) {
       return getDefaultRooms();
