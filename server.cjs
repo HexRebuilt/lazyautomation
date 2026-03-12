@@ -19,36 +19,50 @@ const mimeTypes = {
   '.ico': 'image/x-icon'
 };
 
-// Proxy request to avoid CORS
-const proxyRequest = (targetUrl, extraHeaders, callback) => {
+// Proxy request to avoid CORS - supports GET and POST
+const proxyRequest = (targetUrl, method, extraHeaders, body, callback) => {
   const target = new url.URL(targetUrl);
   const options = {
     hostname: target.hostname,
     port: target.port || (target.protocol === 'https:' ? 443 : 80),
     path: target.pathname + target.search,
-    method: 'GET',
+    method: method || 'GET',
     headers: {
       'Accept': 'application/json',
+      'Content-Type': 'application/json',
       'User-Agent': 'LazyAutomation/1.0',
       ...extraHeaders,
-    }
+    },
+    timeout: 30000, // 30 second timeout for AI requests
   };
 
   const protocol = target.protocol === 'https:' ? https : http;
   const req = protocol.request(options, (res) => {
-    callback(res.statusCode, res.headers);
-    res.on('data', (chunk) => {});
-    res.on('end', () => {});
+    let data = '';
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
+    res.on('end', () => {
+      callback(res.statusCode, res.headers, data);
+    });
   });
 
   req.on('error', (e) => {
-    callback(0, {});
+    callback(502, {}, JSON.stringify({ error: 'Bad Gateway', message: e.message }));
   });
 
+  req.on('timeout', () => {
+    req.destroy();
+    callback(504, {}, JSON.stringify({ error: 'Gateway Timeout' }));
+  });
+
+  if (body) {
+    req.write(body);
+  }
   req.end();
 };
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   // Health check
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -56,12 +70,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Proxy endpoint for testing connections
+  // Proxy endpoint for API calls (supports GET and POST)
   if (req.url.startsWith('/api/proxy/')) {
     const target = decodeURIComponent(req.url.replace('/api/proxy/', ''));
     
     try {
       new URL(target); // Validate URL
+      
+      // Get request method
+      const method = req.method;
       
       // Forward Authorization header if present
       const headers = {};
@@ -69,16 +86,42 @@ const server = http.createServer((req, res) => {
         headers['Authorization'] = req.headers.authorization;
       }
       
-      proxyRequest(target, headers, (status, headers) => {
-        res.writeHead(status, {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+      // Read body for POST/PUT requests
+      let body = null;
+      if (method === 'POST' || method === 'PUT') {
+        body = await new Promise((resolve) => {
+          let data = '';
+          req.on('data', chunk => data += chunk);
+          req.on('end', () => resolve(data));
         });
-        res.end(JSON.stringify({ status, success: status >= 200 && status < 400 }));
+      }
+      
+      proxyRequest(target, method, headers, body, (status, responseHeaders, data) => {
+        // Try to parse as JSON, otherwise send as text
+        let parsedData;
+        let contentType = 'text/plain';
+        
+        try {
+          parsedData = JSON.parse(data);
+          contentType = 'application/json';
+        } catch {
+          parsedData = data;
+        }
+        
+        res.writeHead(status, {
+          'Content-Type': contentType,
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        });
+        res.end(typeof parsedData === 'string' ? parsedData : JSON.stringify(parsedData));
       });
     } catch (e) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid URL' }));
+      res.writeHead(400, { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify({ error: 'Invalid URL', message: e.message }));
     }
     return;
   }

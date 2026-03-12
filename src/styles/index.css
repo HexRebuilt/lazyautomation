@@ -490,3 +490,118 @@ body {
 .test-result.error {
   color: var(--danger-color);
 }
+
+/* Home Layout */
+.home-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+.home-main {
+  min-width: 0;
+}
+
+.home-sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+/* Automations Panel */
+.automations-panel {
+  background-color: var(--card-background);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.automations-panel h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.automations-panel .no-data {
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.automations-list {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.automation-room {
+  margin-bottom: 16px;
+}
+
+.automation-room h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.automation-room ul {
+  list-style: none;
+}
+
+.automation-room .automation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.automation-room .automation-item:last-child {
+  border-bottom: none;
+}
+
+.automation-room .automation-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.automation-room .status-badge {
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.automation-room .status-badge.active {
+  background-color: rgba(52, 199, 89, 0.15);
+  color: var(--success-color);
+}
+
+.automation-room .status-badge.inactive {
+  background-color: rgba(142, 142, 147, 0.15);
+  color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .home-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .home-sidebar {
+    position: static;
+  }
+  
+  .automations-list {
+    max-height: none;
+  }
+}

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, checkHassConnection } from './services/homeAssistant.jsx';
+import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, fetchAllAutomations, checkHassConnection } from './services/homeAssistant.jsx';
 import { checkOllamaConnection } from './services/ollama.jsx';
 import useTheme from './hooks/useTheme.jsx';
 import { SettingsProvider } from './context/SettingsContext.jsx';
 import Header from './components/Header.jsx';
 import RoomSelector from './components/RoomSelector.jsx';
 import Dashboard from './components/Dashboard.jsx';
+import AutomationsPanel from './components/AutomationsPanel.jsx';
 import Settings from './components/Settings.jsx';
 import './styles/index.css';
 
@@ -17,6 +18,7 @@ function AppContent() {
   const [sensors, setSensors] = useState([]);
   const [appliances, setAppliances] = useState([]);
   const [automations, setAutomations] = useState([]);
+  const [allAutomations, setAllAutomations] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hassStatus, setHassStatus] = useState('connecting');
@@ -49,6 +51,19 @@ function AppContent() {
       }
     };
     loadRooms();
+  }, []);
+
+  // Load all automations for the right panel
+  useEffect(() => {
+    const loadAllAutomations = async () => {
+      try {
+        const data = await fetchAllAutomations();
+        setAllAutomations(data);
+      } catch (err) {
+        console.error('Failed to load all automations:', err);
+      }
+    };
+    loadAllAutomations();
   }, []);
 
   useEffect(() => {
@@ -118,28 +133,34 @@ function AppContent() {
         {currentPage === 'settings' ? (
           <Settings />
         ) : (
-          <>
-            {error && <div className="error-message">{error}</div>}
-            
-            <RoomSelector 
-              rooms={rooms} 
-              selectedRoom={selectedRoom} 
-              onRoomSelect={handleRoomSelect} 
-            />
-            
-            {selectedRoom && !loading && (
-              <Dashboard 
-                sensors={sensors}
-                appliances={appliances}
-                automations={automations}
-                roomName={selectedRoom.name}
+          <div className="home-layout">
+            <div className="home-main">
+              {error && <div className="error-message">{error}</div>}
+              
+              <RoomSelector 
+                rooms={rooms} 
+                selectedRoom={selectedRoom} 
+                onRoomSelect={handleRoomSelect} 
               />
-            )}
+              
+              {selectedRoom && !loading && (
+                <Dashboard 
+                  sensors={sensors}
+                  appliances={appliances}
+                  automations={automations}
+                  roomName={selectedRoom.name}
+                />
+              )}
+              
+              {loading && selectedRoom && (
+                <div className="loading">Loading room data...</div>
+              )}
+            </div>
             
-            {loading && selectedRoom && (
-              <div className="loading">Loading room data...</div>
-            )}
-          </>
+            <aside className="home-sidebar">
+              <AutomationsPanel automations={allAutomations} />
+            </aside>
+          </div>
         )}
       </main>
     </div>

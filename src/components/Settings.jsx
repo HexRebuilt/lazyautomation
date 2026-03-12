@@ -37,11 +37,10 @@ const Settings = () => {
           const response = await fetch(proxyUrl, {
             headers: settings.hassToken ? { 'Authorization': `Bearer ${settings.hassToken}` } : {}
           });
-          const data = await response.json();
-          if (data.success) {
+          if (response.ok) {
             result = { success: true, message: 'Connected successfully!' };
           } else {
-            result = { success: false, message: `Connection failed (HTTP ${data.status})` };
+            result = { success: false, message: `Connection failed (HTTP ${response.status})` };
           }
         }
       } else if (type === 'ollama') {
@@ -51,11 +50,10 @@ const Settings = () => {
           targetUrl = `${settings.ollamaHost}/api/tags`;
           const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
           const response = await fetch(proxyUrl);
-          const data = await response.json();
-          if (data.success) {
+          if (response.ok) {
             result = { success: true, message: 'Connected successfully!' };
           } else {
-            result = { success: false, message: `Connection failed (HTTP ${data.status})` };
+            result = { success: false, message: `Connection failed (HTTP ${response.status})` };
           }
         }
       } else if (type === 'llm') {
@@ -65,11 +63,10 @@ const Settings = () => {
           targetUrl = `${settings.llmApiUrl}/models`;
           const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
           const response = await fetch(proxyUrl);
-          const data = await response.json();
-          if (data.success) {
+          if (response.ok) {
             result = { success: true, message: 'Connected successfully!' };
           } else {
-            result = { success: false, message: `Connection failed (HTTP ${data.status})` };
+            result = { success: false, message: `Connection failed (HTTP ${response.status})` };
           }
         }
       }
@@ -107,7 +104,7 @@ const Settings = () => {
                 onChange={(e) => updateSettings({ hassHost: e.target.value })}
                 placeholder="https://homeassistant.local:8123"
               />
-              <span className="form-hint">The URL of your Home Assistant instance</span>
+              <span className="form-hint">Use <code>http://host.docker.internal:8123</code> if running on same machine</span>
             </div>
 
             <div className="form-group">
@@ -150,6 +147,7 @@ const Settings = () => {
                 onChange={(e) => updateSettings({ ollamaHost: e.target.value })}
                 placeholder="http://localhost:11434"
               />
+              <span className="form-hint">Use <code>http://host.docker.internal:11434</code> if running on same machine</span>
             </div>
 
             <button
