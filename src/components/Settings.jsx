@@ -31,12 +31,15 @@ const Settings = () => {
         if (!settings.hassHost) {
           result = { success: false, message: 'Home Assistant URL not configured' };
         } else {
+          // hassFetch adds /api prefix, so just use root endpoint here
           targetUrl = `${settings.hassHost}/api/`;
           // Use proxy to avoid CORS
           const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
+          console.log('[Settings] Testing HA connection:', proxyUrl);
           const response = await fetch(proxyUrl, {
             headers: settings.hassToken ? { 'Authorization': `Bearer ${settings.hassToken}` } : {}
           });
+          console.log('[Settings] HA response:', response.status);
           if (response.ok) {
             result = { success: true, message: 'Connected successfully!' };
           } else {

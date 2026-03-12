@@ -3,12 +3,17 @@ import { getHassConfig } from './settings.js';
 // Use fetch through proxy to avoid CORS issues
 const hassFetch = async (endpoint, options = {}) => {
   const config = getHassConfig();
+  console.log('[HA Service] Config:', { host: config.host, hasToken: !!config.token });
+  
   if (!config.host) {
     throw new Error('Home Assistant URL not configured');
   }
   
+  // HA API requires /api prefix (e.g., /api/states, /api/areas)
   const targetUrl = `${config.host}/api${endpoint}`;
+  console.log('[HA Service] Fetching:', targetUrl);
   const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
+  console.log('[HA Service] Proxy URL:', proxyUrl);
   
   const headers = {
     'Content-Type': 'application/json',
@@ -16,6 +21,8 @@ const hassFetch = async (endpoint, options = {}) => {
   };
   
   const response = await fetch(proxyUrl, { headers });
+  
+  console.log('[HA Service] Response status:', response.status);
   
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
@@ -27,14 +34,24 @@ const hassFetch = async (endpoint, options = {}) => {
 export const fetchRooms = async () => {
   try {
     const states = await hassFetch('/states');
+    console.log('Total entities loaded:', states.length);
+    console.log('Sample entities:', states.slice(0, 5).map(s => s.entity_id));
     
-    // Try to get areas from Home Assistant API first (preferred method)
-    // Note: hassFetch adds /api prefix, so use /areas not /api/areas
+    // Try to get areas from Home Assistant API - try multiple endpoints
     let areas = [];
-    try {
-      areas = await hassFetch('/areas');
-    } catch (e) {
-      console.warn('Could not fetch areas from HA:', e.message);
+    const areaEndpoints = ['/areas', '/config/areas', '/area_registry'];
+    
+    for (const endpoint of areaEndpoints) {
+      try {
+        console.log('Trying area endpoint:', endpoint);
+        areas = await hassFetch(endpoint);
+        if (areas && areas.length > 0) {
+          console.log('Found areas from:', endpoint, areas);
+          break;
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch areas from ${endpoint}:`, e.message);
+      }
     }
     
     const rooms = [];
@@ -61,16 +78,42 @@ export const fetchRooms = async () => {
       }
     }
     
-    // Priority 2: Use area_id from entity attributes (also reliable)
-    console.log('Trying area_id from entity attributes...');
+    // Priority 2: Use area_id OR room_id from entity attributes
+    console.log('Trying area_id and room_id from entity attributes...');
+    console.log('Sample entity attributes:', states.slice(0, 3).map(s => ({ entity_id: s.entity_id, area_id: s.attributes?.area_id, room_id: s.attributes?.room_id, attributes: Object.keys(s.attributes || {}) })));
+    
+    // Map room_id to room names (based on what we found in your HA)
+    const roomIdToName = {
+      1: 'Kitchen',
+      2: 'Living Room',
+      3: 'Hallway',
+      4: 'Bedroom',
+      7: 'Bathroom'
+    };
+    
     states.forEach(state => {
       const areaId = state.attributes?.area_id;
+      const roomId = state.attributes?.room_id;
+      
+      // Use area_id if available
       if (areaId && !roomSet.has(areaId)) {
+        console.log('Found area_id:', areaId, 'from entity:', state.entity_id);
         roomSet.add(areaId);
         rooms.push({
           id: areaId,
           name: areaId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
           icon: getRoomIcon(areaId)
+        });
+      }
+      // Otherwise use room_id if available
+      else if (roomId && !roomSet.has('room_' + roomId)) {
+        const roomName = roomIdToName[roomId] || `Room ${roomId}`;
+        console.log('Found room_id:', roomId, '->', roomName, 'from entity:', state.entity_id);
+        roomSet.add('room_' + roomId);
+        rooms.push({
+          id: 'room_' + roomId,
+          name: roomName,
+          icon: getRoomIcon(roomName.toLowerCase().replace(' ', '_'))
         });
       }
     });
