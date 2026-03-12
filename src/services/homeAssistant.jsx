@@ -28,7 +28,7 @@ export const fetchRooms = async () => {
   try {
     const states = await hassFetch('/states');
     
-    // Try to get areas from Home Assistant API first
+    // Try to get areas from Home Assistant API first (preferred method)
     let areas = [];
     try {
       areas = await hassFetch('/api/areas');
@@ -37,51 +37,67 @@ export const fetchRooms = async () => {
     }
     
     const rooms = [];
+    const roomSet = new Set();
     
-    // If we have areas from HA, use those
+    // Priority 1: Use areas from HA API
     if (areas && areas.length > 0) {
       areas.forEach(area => {
-        rooms.push({
-          id: area.area_id,
-          name: area.name || area.area_id,
-          icon: getRoomIcon(area.area_id)
-        });
-      });
-    } else {
-      // Otherwise extract from entity IDs (e.g., sensor.living_room_temperature -> living_room)
-      const roomNames = new Set();
-      
-      states.forEach(state => {
-        const entityId = state.entity_id;
-        // Try to extract room name from entity ID pattern: type.room_name.something
-        const parts = entityId.split('.');
-        if (parts.length >= 2) {
-          const roomPart = parts[1];
-          // Check if it looks like a room name (not a device type)
-          const commonTypes = ['sensor', 'switch', 'light', 'binary_sensor', 'climate', 'fan', 'cover', 'lock', 'automation', 'scene', 'script', 'input_', 'binary_'];
-          if (!commonTypes.includes(roomPart) && !roomPart.includes('_') && roomPart.length > 2) {
-            roomNames.add(roomPart);
-          }
+        if (!roomSet.has(area.area_id)) {
+          roomSet.add(area.area_id);
+          rooms.push({
+            id: area.area_id,
+            name: area.name || area.area_id,
+            icon: getRoomIcon(area.area_id)
+          });
         }
-      });
-      
-      // Also try area_id if available
-      states.forEach(state => {
-        const areaId = state.attributes?.area_id;
-        if (areaId) {
-          roomNames.add(areaId);
-        }
-      });
-      
-      // Convert to rooms
-      roomNames.forEach(name => {
-        rooms.push({
-          id: name,
-          name: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-          icon: getRoomIcon(name)
-        });
       });
     }
+    
+    // Priority 2: Use area_id from entity attributes (proper HA way)
+    states.forEach(state => {
+      const areaId = state.attributes?.area_id;
+      if (areaId && !roomSet.has(areaId)) {
+        roomSet.add(areaId);
+        rooms.push({
+          id: areaId,
+          name: areaId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          icon: getRoomIcon(areaId)
+        });
+      }
+    });
+    
+    // Priority 3: Try to extract room from entity IDs as fallback
+    // Pattern: domain.room_name.something (e.g., light.kitchen.ceiling)
+    states.forEach(state => {
+      const entityId = state.entity_id;
+      const parts = entityId.split('.');
+      if (parts.length >= 2) {
+        const roomPart = parts[1];
+        // Only use if it looks like a valid room name (not a domain/type)
+        const commonTypes = ['sensor', 'switch', 'light', 'binary_sensor', 'climate', 
+          'fan', 'cover', 'lock', 'automation', 'scene', 'script', 'input_', 'binary_',
+          'device_tracker', 'person', 'group', 'zone', 'weather', 'calendar', 'camera',
+          'media_player', 'vacuum', 'water_heater', 'humidifier', 'deconz', 'zha', 'zigbee'];
+        
+        // Skip if it's a common domain type
+        if (commonTypes.includes(roomPart)) return;
+        
+        // Skip if it looks like an entity ID (has multiple underscores that might be a name)
+        if (roomPart.includes('__') || roomPart.startsWith('group.') || roomPart.startsWith('scene.')) return;
+        
+        // Accept room names that are reasonable length and don't have weird patterns
+        if (roomPart.length >= 2 && roomPart.length <= 30 && !roomPart.match(/^[0-9]+$/)) {
+          if (!roomSet.has(roomPart)) {
+            roomSet.add(roomPart);
+            rooms.push({
+              id: roomPart,
+              name: roomPart.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+              icon: getRoomIcon(roomPart)
+            });
+          }
+        }
+      }
+    });
     
     if (rooms.length === 0) {
       return getDefaultRooms();
@@ -97,21 +113,38 @@ export const fetchRooms = async () => {
 export const fetchSensors = async (room) => {
   try {
     const states = await hassFetch('/states');
+    const roomId = room.id.toLowerCase();
+    const roomName = room.name.toLowerCase();
     
     const sensors = states
       .filter(state => {
         const entityId = state.entity_id;
         const attributes = state.attributes;
         
-        // Check by area_id OR by entity ID pattern
-        const hasAreaId = attributes?.area_id === room.id;
-        const entityRoom = entityId.split('.')[1];
-        const hasMatchingRoom = entityRoom === room.id || entityRoom === room.id.replace(/_/g, ' ');
+        // Only process sensor entities
+        if (!entityId.startsWith('sensor.')) return false;
         
-        return (
-          entityId.startsWith('sensor.') &&
-          (hasAreaId || hasMatchingRoom)
-        );
+        // Check by area_id (preferred method in HA)
+        const areaId = attributes?.area_id;
+        if (areaId && areaId.toLowerCase() === roomId) return true;
+        
+        // Also check if area_id contains the room name
+        if (areaId && areaId.toLowerCase().includes(roomName)) return true;
+        
+        // Fallback: check entity ID pattern (domain.room.something)
+        const parts = entityId.split('.');
+        if (parts.length >= 2) {
+          const entityRoom = parts[1].toLowerCase();
+          // Match room_id or room name variations
+          if (entityRoom === roomId || 
+              entityRoom === roomId.replace(/_/g, ' ') ||
+              roomName.includes(entityRoom) ||
+              entityRoom.includes(roomId.replace(/_/g, ' '))) {
+            return true;
+          }
+        }
+        
+        return false;
       })
       .map(state => ({
         id: state.entity_id,
@@ -131,23 +164,41 @@ export const fetchSensors = async (room) => {
 export const fetchAppliances = async (room) => {
   try {
     const states = await hassFetch('/states');
+    const roomId = room.id.toLowerCase();
+    const roomName = room.name.toLowerCase();
     
-    const applianceTypes = ['light', 'switch', 'plug', 'outlet', 'fan', 'climate', 'cover', 'lock'];
+    const applianceTypes = ['light', 'switch', 'plug', 'outlet', 'fan', 'climate', 'cover', 'lock', 'media_player', 'vacuum'];
     
     const appliances = states
       .filter(state => {
         const entityId = state.entity_id;
         const attributes = state.attributes;
         
-        // Check by area_id OR by entity ID pattern
-        const hasAreaId = attributes?.area_id === room.id;
-        const entityRoom = entityId.split('.')[1];
-        const hasMatchingRoom = entityRoom === room.id || entityRoom === room.id.replace(/_/g, ' ');
+        // Only process appliance entities
+        const domain = entityId.split('.')[0];
+        if (!applianceTypes.includes(domain)) return false;
         
-        return (
-          applianceTypes.some(type => entityId.startsWith(`${type}.`)) &&
-          (hasAreaId || hasMatchingRoom)
-        );
+        // Check by area_id (preferred method in HA)
+        const areaId = attributes?.area_id;
+        if (areaId && areaId.toLowerCase() === roomId) return true;
+        
+        // Also check if area_id contains the room name
+        if (areaId && areaId.toLowerCase().includes(roomName)) return true;
+        
+        // Fallback: check entity ID pattern (domain.room.something)
+        const parts = entityId.split('.');
+        if (parts.length >= 2) {
+          const entityRoom = parts[1].toLowerCase();
+          // Match room_id or room name variations
+          if (entityRoom === roomId || 
+              entityRoom === roomId.replace(/_/g, ' ') ||
+              roomName.includes(entityRoom) ||
+              entityRoom.includes(roomId.replace(/_/g, ' '))) {
+            return true;
+          }
+        }
+        
+        return false;
       })
       .map(state => ({
         id: state.entity_id,

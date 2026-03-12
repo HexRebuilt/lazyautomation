@@ -167,7 +167,7 @@ const Settings = () => {
 
           {/* LLM API Section */}
           <section className="settings-section">
-            <h2>LLM API (External)</h2>
+            <h2>LLM API (External / LMStudio)</h2>
             
             <div className="form-group">
               <label htmlFor="llmApiUrl">API URL</label>
@@ -176,9 +176,12 @@ const Settings = () => {
                 id="llmApiUrl"
                 value={settings.llmApiUrl}
                 onChange={(e) => updateSettings({ llmApiUrl: e.target.value })}
-                placeholder="http://localhost:6969/v1"
+                placeholder="http://localhost:1234/v1"
               />
-              <span className="form-hint">For LMStudio, Ollama with API, or other LLM providers</span>
+              <span className="form-hint">
+                For LMStudio: Use your host IP (e.g., <code>http://192.168.1.x:1234/v1</code>)<br/>
+                Or OpenAI-compatible API URL
+              </span>
             </div>
 
             <div className="form-group">
