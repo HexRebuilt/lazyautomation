@@ -1,20 +1,32 @@
-import axios from 'axios';
+import { getHassConfig } from './settings.js';
 
-const HASS_HOST = process.env.REACT_APP_HASS_HOST || 'http://homeassistant.local:8123';
-const HASS_TOKEN = process.env.REACT_APP_HASS_TOKEN;
-
-const hassApi = axios.create({
-  baseURL: `${HASS_HOST}/api`,
-  headers: {
-    'Authorization': `Bearer ${HASS_TOKEN}`,
-    'Content-Type': 'application/json'
+// Use fetch through proxy to avoid CORS issues
+const hassFetch = async (endpoint, options = {}) => {
+  const config = getHassConfig();
+  if (!config.host) {
+    throw new Error('Home Assistant URL not configured');
   }
-});
+  
+  const targetUrl = `${config.host}/api${endpoint}`;
+  const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(config.token ? { 'Authorization': `Bearer ${config.token}` } : {})
+  };
+  
+  const response = await fetch(proxyUrl, { headers });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  
+  return response.json();
+};
 
 export const fetchRooms = async () => {
   try {
-    const response = await hassApi.get('/states');
-    const states = response.data;
+    const states = await hassFetch('/states');
     
     const rooms = [];
     const processedEntities = new Set();
@@ -45,8 +57,7 @@ export const fetchRooms = async () => {
 
 export const fetchSensors = async (room) => {
   try {
-    const response = await hassApi.get('/states');
-    const states = response.data;
+    const states = await hassFetch('/states');
     
     const sensors = states
       .filter(state => {
@@ -74,8 +85,7 @@ export const fetchSensors = async (room) => {
 
 export const fetchAppliances = async (room) => {
   try {
-    const response = await hassApi.get('/states');
-    const states = response.data;
+    const states = await hassFetch('/states');
     
     const applianceTypes = ['light', 'switch', 'plug', 'outlet', 'fan', 'climate'];
     
@@ -105,8 +115,7 @@ export const fetchAppliances = async (room) => {
 
 export const fetchAutomations = async (room) => {
   try {
-    const response = await hassApi.get('/automations');
-    const automations = response.data;
+    const automations = await hassFetch('/automations');
     
     const roomAutomations = automations
       .filter(automation => {
@@ -129,7 +138,7 @@ export const fetchAutomations = async (room) => {
 
 export const checkHassConnection = async () => {
   try {
-    await hassApi.get('/');
+    await hassFetch('/');
     return { connected: true, error: null };
   } catch (error) {
     return { 
@@ -161,5 +170,3 @@ const getDefaultRooms = () => {
     { id: 'office', name: 'Office', icon: '💼' }
   ];
 };
-
-export default hassApi;

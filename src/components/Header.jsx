@@ -4,7 +4,9 @@ const Header = ({
   theme, 
   onThemeToggle, 
   hassStatus, 
-  ollamaStatus 
+  ollamaStatus,
+  currentPage = 'home',
+  onNavigate
 }) => {
   const getStatusClass = (status) => {
     if (status === 'connected') return 'connected';
@@ -16,6 +18,20 @@ const Header = ({
     <header className="header">
       <div className="header-left">
         <h1>LazyAutomation</h1>
+        <nav className="header-nav">
+          <button 
+            className={`nav-button ${currentPage === 'home' ? 'active' : ''}`}
+            onClick={() => onNavigate && onNavigate('home')}
+          >
+            🏠 Home
+          </button>
+          <button 
+            className={`nav-button ${currentPage === 'settings' ? 'active' : ''}`}
+            onClick={() => onNavigate && onNavigate('settings')}
+          >
+            ⚙️ Settings
+          </button>
+        </nav>
       </div>
       <div className="header-right">
         <div className="connection-status" title="Home Assistant">

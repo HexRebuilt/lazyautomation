@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, checkHassConnection } from './services/homeAssistant';
-import { checkOllamaConnection } from './services/ollama';
-import useTheme from './hooks/useTheme';
-import Header from './components/Header';
-import RoomSelector from './components/RoomSelector';
-import Dashboard from './components/Dashboard';
+import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, checkHassConnection } from './services/homeAssistant.jsx';
+import { checkOllamaConnection } from './services/ollama.jsx';
+import useTheme from './hooks/useTheme.jsx';
+import { SettingsProvider } from './context/SettingsContext.jsx';
+import Header from './components/Header.jsx';
+import RoomSelector from './components/RoomSelector.jsx';
+import Dashboard from './components/Dashboard.jsx';
+import Settings from './components/Settings.jsx';
 import './styles/index.css';
 
-function App() {
+function AppContent() {
   const { theme, toggleTheme } = useTheme();
+  const [currentPage, setCurrentPage] = useState('home');
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sensors, setSensors] = useState([]);
@@ -19,6 +22,7 @@ function App() {
   const [hassStatus, setHassStatus] = useState('connecting');
   const [ollamaStatus, setOllamaStatus] = useState('connecting');
 
+  // Check connections on mount
   useEffect(() => {
     const checkConnections = async () => {
       const hass = await checkHassConnection();
@@ -32,6 +36,7 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Load rooms on mount
   useEffect(() => {
     const loadRooms = async () => {
       try {
@@ -39,7 +44,7 @@ function App() {
         setRooms(roomsData);
         setLoading(false);
       } catch (err) {
-        setError('Failed to load rooms. Please check your Home Assistant connection.');
+        setError('Failed to load rooms. Please check your Home Assistant connection settings.');
         setLoading(false);
       }
     };
@@ -73,8 +78,29 @@ function App() {
     setSelectedRoom(room);
   };
 
-  if (loading && rooms.length === 0) {
-    return <div className="loading">Loading...</div>;
+  const handleNavigate = (page) => {
+    setCurrentPage(page);
+    if (page === 'home') {
+      setError(null);
+    }
+  };
+
+  if (loading && rooms.length === 0 && currentPage === 'home') {
+    return (
+      <div className="app">
+        <Header 
+          theme={theme}
+          onThemeToggle={toggleTheme}
+          hassStatus={hassStatus}
+          ollamaStatus={ollamaStatus}
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+        />
+        <main className="main-content">
+          <div className="loading">Loading...</div>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -84,31 +110,47 @@ function App() {
         onThemeToggle={toggleTheme}
         hassStatus={hassStatus}
         ollamaStatus={ollamaStatus}
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
       />
       
       <main className="main-content">
-        {error && <div className="error-message">{error}</div>}
-        
-        <RoomSelector 
-          rooms={rooms} 
-          selectedRoom={selectedRoom} 
-          onRoomSelect={handleRoomSelect} 
-        />
-        
-        {selectedRoom && !loading && (
-          <Dashboard 
-            sensors={sensors}
-            appliances={appliances}
-            automations={automations}
-            roomName={selectedRoom.name}
-          />
-        )}
-        
-        {loading && selectedRoom && (
-          <div className="loading">Loading room data...</div>
+        {currentPage === 'settings' ? (
+          <Settings />
+        ) : (
+          <>
+            {error && <div className="error-message">{error}</div>}
+            
+            <RoomSelector 
+              rooms={rooms} 
+              selectedRoom={selectedRoom} 
+              onRoomSelect={handleRoomSelect} 
+            />
+            
+            {selectedRoom && !loading && (
+              <Dashboard 
+                sensors={sensors}
+                appliances={appliances}
+                automations={automations}
+                roomName={selectedRoom.name}
+              />
+            )}
+            
+            {loading && selectedRoom && (
+              <div className="loading">Loading room data...</div>
+            )}
+          </>
         )}
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
   );
 }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import Dashboard from '../components/Dashboard';
+import Dashboard from '../components/Dashboard.jsx';
 
 const mockSensors = [
   { id: 'sensor.temperature', name: 'Temperature', state: '22', unit: '°C' },

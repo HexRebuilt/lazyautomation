@@ -1,0 +1,19 @@
+# Dependencies and build files
+node_modules/
+*.log
+
+# IDE configuration and environment files
+.vscode/
+.git/
+
+# Environment variables and secrets
+.env
+.env.local
+.env*.local
+
+# Logs, temporary files, and caches
+*.tmp
+*.suo
+
+# Ignore operating system files (Windows)
+Thumbs.db

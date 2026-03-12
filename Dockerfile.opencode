@@ -1,0 +1,29 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
+ENV npm_config_progress_bar_style=unicode
+
+COPY package*.json ./
+RUN npm install --production
+
+# Copy required files and dependencies
+COPY public/ /app/public/
+COPY src/ /app/src/
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Healthcheck for the OpenCode runner
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD curl -f http://localhost:${OPENCODE_PORT:-5000}/health || exit 1
+
+EXPOSE ${OPENCODE_PORT:-5000}
+
+# Custom entrypoint for OpenCode runner
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
+USER node
+
+# Start the OpenCode runner
+CMD ["npm", "start:opencode"]
