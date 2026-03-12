@@ -29,11 +29,12 @@ export const fetchRooms = async () => {
     const states = await hassFetch('/states');
     
     // Try to get areas from Home Assistant API first (preferred method)
+    // Note: hassFetch adds /api prefix, so use /areas not /api/areas
     let areas = [];
     try {
-      areas = await hassFetch('/api/areas');
+      areas = await hassFetch('/areas');
     } catch (e) {
-      // Areas API not available, continue
+      console.warn('Could not fetch areas from HA:', e.message);
     }
     
     const rooms = [];
@@ -41,6 +42,7 @@ export const fetchRooms = async () => {
     
     // Priority 1: Use areas from HA API (MOST RELIABLE)
     if (areas && areas.length > 0) {
+      console.log('Found areas from HA API:', areas);
       areas.forEach(area => {
         if (!roomSet.has(area.area_id)) {
           roomSet.add(area.area_id);
@@ -51,9 +53,16 @@ export const fetchRooms = async () => {
           });
         }
       });
+      
+      // If we got rooms from areas, return them (sorted)
+      if (rooms.length > 0) {
+        rooms.sort((a, b) => a.name.localeCompare(b.name));
+        return rooms;
+      }
     }
     
     // Priority 2: Use area_id from entity attributes (also reliable)
+    console.log('Trying area_id from entity attributes...');
     states.forEach(state => {
       const areaId = state.attributes?.area_id;
       if (areaId && !roomSet.has(areaId)) {
@@ -66,13 +75,14 @@ export const fetchRooms = async () => {
       }
     });
     
-    // If we found real rooms from areas, return them (don't pollute with entity ID parsing)
+    // If we found rooms from area_id, return them
     if (rooms.length > 0) {
+      rooms.sort((a, b) => a.name.localeCompare(b.name));
       return rooms;
     }
     
     // Priority 3: Extract from entity IDs as LAST RESORT fallback
-    // Only do this if no areas were found at all
+    console.log('Falling back to entity ID parsing...');
     const knownDomains = new Set([
       'sensor', 'switch', 'light', 'binary_sensor', 'climate', 'fan', 'cover', 'lock',
       'automation', 'scene', 'script', 'input_boolean', 'input_number', 'input_text',
@@ -100,9 +110,6 @@ export const fetchRooms = async () => {
         // Skip known domains (they would be wrong as room names)
         if (knownDomains.has(domain)) return;
         
-        // Skip if it looks like a device name (has multiple parts separated by _)
-        // e.g., "esp32_bedroom_sensor" - the entity name part should be simple
-        
         // Check if entity name matches a known room
         if (knownRooms.has(entityName)) {
           if (!roomSet.has(entityName)) {
@@ -116,7 +123,6 @@ export const fetchRooms = async () => {
         }
         
         // Also check: does the entity name START with a known room?
-        // e.g., "livingroom_switch" -> room = "livingroom"
         for (const room of knownRooms) {
           if (entityName.startsWith(room) && (entityName === room || entityName[room.length] === '_')) {
             if (!roomSet.has(room)) {

@@ -34,8 +34,9 @@ describe('Home Assistant Service', () => {
         { entity_id: 'light.living_room', attributes: {} }
       ];
 
-      fetch.mockResolvedValueOnce(mockAreas); // /api/areas
-      fetch.mockResolvedValueOnce(mockStates); // /api/states
+      // hassFetch adds /api prefix, so we call /areas not /api/areas
+      fetch.mockResolvedValueOnce(mockAreas);  // /areas
+      fetch.mockResolvedValueOnce(mockStates); // /states
 
       const rooms = await fetchRooms();
 
@@ -50,9 +51,9 @@ describe('Home Assistant Service', () => {
         { entity_id: 'light.living_room', attributes: { area_id: 'living_room' } }
       ];
 
-      // First call returns empty areas, second call returns states
-      fetch.mockResolvedValueOnce([]); // /api/areas
-      fetch.mockResolvedValueOnce(mockStates); // /api/states
+      // First call (areas) returns empty, second call (states) returns entities
+      fetch.mockResolvedValueOnce([]);  // /areas - empty
+      fetch.mockResolvedValueOnce(mockStates); // /states
 
       const rooms = await fetchRooms();
 
