@@ -216,16 +216,17 @@ export const fetchSensors = async (room) => {
     const roomId = room.id.toLowerCase();
     const roomName = room.name.toLowerCase();
     
-    // Room name mappings (including Italian)
+    // Strict room name mappings - only match exact room names in entity ID
     const roomNameVariations = {
-      'living_room': ['living room', 'soggiorno', 'sala'],
-      'bedroom': ['bedroom', 'camera da letto', 'camera'],
+      'living_room': ['living_room', 'soggiorno', 'sala'],
+      'bedroom': ['bedroom', 'camera_da_letto'],
       'kitchen': ['kitchen', 'cucina'],
       'bathroom': ['bathroom', 'bagno'],
       'office': ['office', 'ufficio', 'studio'],
       'hallway': ['hallway', 'corridoio'],
-      'garage': ['garage', 'box'],
-      'garden': ['garden', 'giardino', 'veranda'],
+      'garage': ['garage'],
+      'box': ['box'],
+      'garden': ['garden', 'giardino'],
       'veranda': ['veranda'],
       'server': ['server']
     };
@@ -245,26 +246,20 @@ export const fetchSensors = async (room) => {
         // Also check if area_id contains the room name
         if (areaId && areaId.toLowerCase().includes(roomName)) return true;
         
-        // Fallback: check entity ID pattern (domain.room.something)
+        // Check entity ID for room match
         const parts = entityId.split('.');
         if (parts.length >= 2) {
           const entityRoom = parts[1].toLowerCase();
           
-          // Check against room name variations
-          for (const [key, variations] of Object.entries(roomNameVariations)) {
-            if (roomId === key || roomName.includes(key) || variations.some(v => roomName.includes(v))) {
-              if (entityRoom.includes(key) || variations.some(v => entityRoom.includes(v))) {
-                return true;
-              }
-            }
-          }
+          // Get variations for the current room
+          const variations = roomNameVariations[roomId] || [];
           
-          // Original matching logic
-          if (entityRoom === roomId || 
-              entityRoom === roomId.replace(/_/g, ' ') ||
-              roomName.includes(entityRoom) ||
-              entityRoom.includes(roomId.replace(/_/g, ' '))) {
-            return true;
+          // Check if entity room starts with or exactly matches room variations
+          for (const variation of variations) {
+            // Match exact or with underscore (e.g., "cucina" or "cucina_temp")
+            if (entityRoom === variation || entityRoom.startsWith(variation + '_')) {
+              return true;
+            }
           }
         }
         
@@ -279,21 +274,6 @@ export const fetchSensors = async (room) => {
         unit: state.attributes.unit_of_measurement || '',
         deviceClass: state.attributes.device_class || 'default'
       }));
-    
-    // If no sensors found for room, return all sensors as fallback
-    if (sensors.length === 0) {
-      console.log('No sensors found for room, returning all sensors');
-      return states
-        .filter(state => state.entity_id.startsWith('sensor.'))
-        .map(state => ({
-          id: state.entity_id,
-          name: state.attributes.friendly_name || state.entity_id,
-          entityId: state.entity_id,
-          state: state.state,
-          unit: state.attributes.unit_of_measurement || '',
-          deviceClass: state.attributes.device_class || 'default'
-        }));
-    }
     
     return sensors;
   } catch (error) {
@@ -333,16 +313,17 @@ export const fetchAppliances = async (room) => {
     const roomId = room.id.toLowerCase();
     const roomName = room.name.toLowerCase();
     
-    // Room name mappings (including Italian)
+    // Strict room name mappings
     const roomNameVariations = {
-      'living_room': ['living room', 'soggiorno', 'sala'],
-      'bedroom': ['bedroom', 'camera da letto', 'camera'],
+      'living_room': ['living_room', 'soggiorno', 'sala'],
+      'bedroom': ['bedroom', 'camera_da_letto'],
       'kitchen': ['kitchen', 'cucina'],
       'bathroom': ['bathroom', 'bagno'],
       'office': ['office', 'ufficio', 'studio'],
       'hallway': ['hallway', 'corridoio'],
-      'garage': ['garage', 'box'],
-      'garden': ['garden', 'giardino', 'veranda'],
+      'garage': ['garage'],
+      'box': ['box'],
+      'garden': ['garden', 'giardino'],
       'veranda': ['veranda'],
       'server': ['server']
     };
@@ -365,59 +346,36 @@ export const fetchAppliances = async (room) => {
         // Also check if area_id contains the room name
         if (areaId && areaId.toLowerCase().includes(roomName)) return true;
         
-        // Fallback: check entity ID pattern (domain.room.something)
+        // Check entity ID for room match
         const parts = entityId.split('.');
         if (parts.length >= 2) {
           const entityRoom = parts[1].toLowerCase();
           
-          // Check against room name variations
-          for (const [key, variations] of Object.entries(roomNameVariations)) {
-            if (roomId === key || roomName.includes(key) || variations.some(v => roomName.includes(v))) {
-              if (entityRoom.includes(key) || variations.some(v => entityRoom.includes(v))) {
-                return true;
-              }
+          // Get variations for the current room
+          const variations = roomNameVariations[roomId] || [];
+          
+          // Check if entity room starts with or exactly matches room variations
+          for (const variation of variations) {
+            if (entityRoom === variation || entityRoom.startsWith(variation + '_')) {
+              return true;
             }
           }
-          
-          // Original matching logic
-          if (entityRoom === roomId || 
-              entityRoom === roomId.replace(/_/g, ' ') ||
-              roomName.includes(entityRoom) ||
-              entityRoom.includes(roomId.replace(/_/g, ' '))) {
-            return true;
-          }
-          }
-          
-          return false;
-        })
-        .map(state => ({
-          id: state.entity_id,
-          // Show both friendly name and entity_id for automation reference
-          name: state.attributes.friendly_name || state.entity_id,
-          entityId: state.entity_id,  // Logical name for automation
-          state: state.state,
-          type: state.entity_id.split('.')[0],
-          isOn: state.state === 'on',
-          lastChanged: state.last_changed
-        }));
-      
-      // If no appliances found for room, return all as fallback
-      if (appliances.length === 0) {
-        console.log('No appliances found for room, returning all');
-        return states
-          .filter(state => applianceTypes.includes(state.entity_id.split('.')[0]))
-          .map(state => ({
-            id: state.entity_id,
-            name: state.attributes.friendly_name || state.entity_id,
-            entityId: state.entity_id,
-            state: state.state,
-            type: state.entity_id.split('.')[0],
-            isOn: state.state === 'on',
-            lastChanged: state.last_changed
-          }));
-      }
-      
-      return appliances;
+        }
+        
+        return false;
+      })
+      .map(state => ({
+        id: state.entity_id,
+        // Show both friendly name and entity_id for automation reference
+        name: state.attributes.friendly_name || state.entity_id,
+        entityId: state.entity_id,  // Logical name for automation
+        state: state.state,
+        type: state.entity_id.split('.')[0],
+        isOn: state.state === 'on',
+        lastChanged: state.last_changed
+      }));
+    
+    return appliances;
   } catch (error) {
     console.error('Error fetching appliances:', error);
     throw error;
