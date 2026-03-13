@@ -8,11 +8,22 @@ All notable changes to this project will be documented in this file.
 - Fixed LLM API HTTP 502 error by updating environment variable prefixes from `REACT_APP_` to `VITE_` for Vite compatibility
 - Updated SettingsContext and settings.js to load environment variables as defaults
 - Fixed .env.example to use correct VITE_ prefix and include LLM API configuration
+- Fixed room selection by adding fallback to extract rooms from entity IDs when area_id is not available
+- Added support for Italian room names in entity ID extraction (soggiorno, cucina, camera_da_letto, etc.)
+
+### Added
+- Model dropdown selector in Settings with server status indicator
+- Model selection functionality that persists to localStorage
+- Testing strategies folder with comprehensive test cases
+- ModelSelector component with connection status display
+- Room extraction fallback for systems without area_id support
 
 ### Changed
 - Updated .env file to use VITE_ prefix for environment variables (required by Vite)
 - Updated SettingsContext.jsx to load environment variables from import.meta.env
 - Updated settings.js to load environment variables from import.meta.env
+- Updated fetchRooms function to extract rooms from entity IDs as fallback
+- Added selectedModel field to settings for model persistence
 
 ### Security
 - Environment variables with VITE_ prefix are not exposed to client-side code (Vite only exposes VITE_ prefixed variables)

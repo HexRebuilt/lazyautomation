@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSettings } from '../context/SettingsContext.jsx';
+import ModelSelector from './ModelSelector.jsx';
 
 const Settings = () => {
   const { settings, updateSettings, resetSettings } = useSettings();
@@ -224,6 +225,13 @@ const Settings = () => {
                 />
                 Prefer local AI (Ollama) over external API
               </label>
+            </div>
+
+            <div className="form-group">
+              <ModelSelector
+                selectedModel={settings.selectedModel}
+                onModelSelect={(model) => updateSettings({ selectedModel: model })}
+              />
             </div>
 
             <button

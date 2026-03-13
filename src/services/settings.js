@@ -9,6 +9,7 @@ export const getSettings = () => {
     llmApiUrl: import.meta.env.VITE_LLM_API_URL || '',
     llmApiKey: import.meta.env.VITE_LLM_API_KEY || '',
     useLocalApi: import.meta.env.VITE_USE_LOCAL_API === 'true' || false,
+    selectedModel: '',
   };
   
   try {
@@ -44,6 +45,7 @@ export const getLLMConfig = () => {
     apiUrl: settings.llmApiUrl,
     apiKey: settings.llmApiKey,
     useLocalApi: settings.useLocalApi,
+    model: settings.selectedModel,
   };
 };
 

@@ -9,6 +9,7 @@ const defaultSettings = {
   llmApiUrl: import.meta.env.VITE_LLM_API_URL || '',
   llmApiKey: import.meta.env.VITE_LLM_API_KEY || '',
   useLocalApi: import.meta.env.VITE_USE_LOCAL_API === 'true' || false,
+  selectedModel: '',
 };
 
 export const SettingsProvider = ({ children }) => {

@@ -30,7 +30,43 @@
         
         **Resolution**: Updated .env file to use VITE_ prefix for environment variables (required by Vite). Updated SettingsContext and settings.js to load environment variables as defaults. The LMStudio API is now accessible through the proxy endpoint.
 
-1. **Documentation:**
+1. **Model Selection:**
+    - [x] ## Task: Add Model Dropdown with Server Status
+        **Goal**: Create a model dropdown selector in Settings that shows available models and server connection status.
+        
+        **Files involved**:
+        - src/components/ModelSelector.jsx: New component for model selection
+        - src/components/Settings.jsx: Updated to include model selector
+        - src/services/llm.jsx: Updated to use selected model from settings
+        - src/services/settings.js: Added selectedModel field
+        - src/context/SettingsContext.jsx: Added selectedModel field
+        
+        **Completion criteria**:
+        - [x] Model dropdown displays available models from LMStudio/Ollama
+        - [x] Server status indicator shows connection state (connected/disconnected/connecting)
+        - [x] Selected model is saved to localStorage
+        - [x] Model selection is used in LLM API calls
+        - [x] Loaded model is displayed in status indicator
+        
+        **Resolution**: Created ModelSelector component with server status indicator, added model selection functionality, and integrated with settings.
+
+2. **Room Selection Fix:**
+    - [x] ## Task: Fix Room Selection for Systems without area_id
+        **Goal**: Fix room selection by adding fallback to extract rooms from entity IDs when area_id is not available.
+        
+        **Files involved**:
+        - src/services/homeAssistant.jsx: Updated fetchRooms function
+        
+        **Completion criteria**:
+        - [x] Rooms are extracted from entity IDs when area_id is not available
+        - [x] Support for Italian room names (soggiorno, cucina, camera_da_letto, etc.)
+        - [x] Support for English room names (living_room, kitchen, bedroom, etc.)
+        - [x] Duplicate room names are handled correctly
+        - [x] Rooms are sorted alphabetically
+        
+        **Resolution**: Updated fetchRooms function to extract rooms from entity IDs as fallback when area_id is not available.
+
+3. **Documentation:**
     - [x] Create a README.md file with project details.
     - [ ] Create a CONTRIBUTING.md file with contribution guidelines.
     - [ ] Create an ISSUE_TEMPLATE.md file for issue reporting.
@@ -50,45 +86,45 @@
     - [x] Ensure the .env file is not pushed to the repository.
 
 4. **Testing and Deployment:**
-    - [x] Set up testing with Jest and other testing frameworks.
+    - [ ] Set up testing with Jest and other testing frameworks.
     - [ ] Create a CI/CD pipeline for automated testing and deployment.
     - [ ] Create a SBOM file for each release.
 
 5. **Security:**
-    - [x] Ensure all sensitive data is stored in the .env file.
-    - [x] Follow security best practices for storing API keys and tokens.
-    - [x] Address any security issues found during testing and deployment.
+    - [ ] Ensure all sensitive data is stored in the .env file.
+    - [ ] Follow security best practices for storing API keys and tokens.
+    - [ ] Address any security issues found during testing and deployment.
 
 6. **Localization:**
-    - [x] Add localization support for room names (English, Italian, Spanish, etc.)
-    - [x] Use REACT_APP_LOCALE env variable to set the display language
-    - [ ] Support multiple language packs for room name translations
+    - [ ] Add localization support for room names (English, Italian, Spanish, etc.)
+    - [ ] Use APP_LOCALE env variable to set the display language
+    - [ ] Support multiple language packs for room name translations supported by the smallest model available on the llm endpoint of chosing OR by selecting it on the settting page. 
     - [ ] Allow LLM-powered translation using local Ollama/LMStudio
 
 7. **Features:**
-    - [x] Room detection from entity IDs (including Italian names like soggiorno, cucina, camera_da_letto)
-    - [x] Entity ID display for automation use
+    - [ ] Room detection from entity IDs (including Italian names like soggiorno, cucina, camera_da_letto)
+    - [ ] Entity ID display for automation use
     - [x] LMStudio/Ollama connection support
     - [ ] Add automation editor
     - [ ] Add sensor history charts
     - [ ] Add device control from UI
 
 8. **Security Fixes (from analysis):**
-    - [x] CRITICAL: Remove SYS_ADMIN capability from opencode-runner service
-    - [x] CRITICAL: Add .env to .gitignore and remove sensitive secrets from git history
-    - [x] HIGH: Pin all Docker image tags to specific versions (remove :latest)
-    - [x] HIGH: Update Dockerfile.opencode - pin base image with SHA digest
-    - [x] HIGH: Refactor Dockerfile.opencode to fix user switch order for npm operations
-    - [x] HIGH: Add read-only filesystem + tmpfs mounts to both services in docker-compose.yml
-    - [x] HIGH: Remove host.docker.internal from production webapp service
-    - [x] MEDIUM: Update Dockerfile - run npm install as non-root appuser before user switch
-    - [x] MEDIUM: Improve build caching in Dockerfile (copy package.json first, use npm ci)
-    - [x] MEDIUM: Add healthcheck endpoint validation in Dockerfile builder stage
-    - [x] MEDIUM: Update docker-entrypoint.sh with security validations (env check, path traversal prevention)
-    - [x] MEDIUM: Pin dependency versions in package.json (replace ^ ranges)
-    - [x] MEDIUM: Add Docker secrets configuration to docker-compose.yml for API keys and tokens
-    - [x] LOW: Remove unnecessary ENV npm_config_progress_bar_style=unicode from Dockerfile.opencode
-    - [x] LOW: Add cap_drop: [ALL] security_opt settings to webapp service in docker-compose.yml
-    - [x] MEDIUM: Run npm audit on package.json and fix discovered vulnerabilities
+    - [ ] CRITICAL: Remove SYS_ADMIN capability from opencode-runner service
+    - [ ] CRITICAL: Add .env to .gitignore and remove sensitive secrets from git history
+    - [ ] HIGH: Pin all Docker image tags to specific versions (remove :latest)
+    - [ ] HIGH: Update Dockerfile.opencode - pin base image with SHA digest
+    - [ ] HIGH: Refactor Dockerfile.opencode to fix user switch order for npm operations
+    - [ ] HIGH: Add read-only filesystem + tmpfs mounts to both services in docker-compose.yml
+    - [ ] HIGH: Remove host.docker.internal from production webapp service
+    - [ ] MEDIUM: Update Dockerfile - run npm install as non-root appuser before user switch
+    - [ ] MEDIUM: Improve build caching in Dockerfile (copy package.json first, use npm ci)
+    - [ ] MEDIUM: Add healthcheck endpoint validation in Dockerfile builder stage
+    - [ ] MEDIUM: Update docker-entrypoint.sh with security validations (env check, path traversal prevention)
+    - [ ] MEDIUM: Pin dependency versions in package.json (replace ^ ranges)
+    - [ ] MEDIUM: Add Docker secrets configuration to docker-compose.yml for API keys and tokens
+    - [ ] LOW: Remove unnecessary ENV npm_config_progress_bar_style=unicode from Dockerfile.opencode
+    - [ ] LOW: Add cap_drop: [ALL] security_opt settings to webapp service in docker-compose.yml
+    - [ ] MEDIUM: Run npm audit on package.json and fix discovered vulnerabilities
     - [ ] LONG-TERM: Set up automated vulnerability scanning pipeline (Trivy/Docker Scan)
     - [ ] LONG-TERM: Create security baseline documentation for all new Dockerfiles

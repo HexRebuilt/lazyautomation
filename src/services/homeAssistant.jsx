@@ -95,6 +95,49 @@ export const fetchRooms = async () => {
       }
     });
     
+    // Priority 3: Extract rooms from entity IDs (fallback for systems without area_id)
+    if (rooms.length === 0) {
+      console.log('No area_id found, extracting rooms from entity IDs...');
+      
+      // Common room patterns in Italian and English
+      const roomPatterns = [
+        // Italian patterns
+        'soggiorno', 'cucina', 'camera_da_letto', 'camera', 'letto', 'bagno', 
+        'ingresso', 'salotto', 'studio', 'ripostiglio', 'cantina', 'soffitta',
+        'garage', 'terrazzo', 'balcone', 'giardino', 'portico',
+        // English patterns
+        'living_room', 'kitchen', 'bedroom', 'bathroom', 'hallway', 'entrance',
+        'dining_room', 'office', 'storage', 'basement', 'attic', 'garage',
+        'terrace', 'balcony', 'garden', 'porch'
+      ];
+      
+      states.forEach(state => {
+        const entityId = state.entity_id;
+        const parts = entityId.split('.');
+        if (parts.length >= 2) {
+          const entityName = parts[1].toLowerCase();
+          
+          // Check if entity name contains any room pattern
+          for (const pattern of roomPatterns) {
+            if (entityName.includes(pattern)) {
+              const normalizedName = pattern.toLowerCase().trim();
+              if (!roomSet.has(normalizedName)) {
+                roomSet.add(normalizedName);
+                rooms.push({
+                  id: normalizedName,
+                  name: pattern.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                  icon: getRoomIcon(normalizedName)
+                });
+              }
+              break;
+            }
+          }
+        }
+      });
+      
+      console.log('Rooms extracted from entity IDs:', rooms);
+    }
+    
     console.log('Rooms found:', rooms);
     console.log('===== END ROOM EXTRACTION =====');
     
