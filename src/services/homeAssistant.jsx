@@ -173,8 +173,12 @@ export const fetchRooms = async () => {
         
         // Check if entity name matches any known room
         for (const [roomKey, roomName] of Object.entries(roomMappings)) {
+          // Skip "camera" matching when it's part of "camera_di_stampa" (print chamber)
+          if (roomKey === 'camera_da_letto' && entityName.includes('camera_di_stampa')) {
+            continue;
+          }
           // Match exact or with underscore prefix
-          if (entityName === roomKey || entityName.startsWith(roomKey + '_') || entityName.includes('_' + roomKey + '_')) {
+          if (entityName === roomKey || entityName.startsWith(roomKey + '_') || entityName.includes('_' + roomKey)) {
             if (!roomSet.has(roomKey)) {
               console.log('Found room from entity ID:', entityId, '->', roomKey, '=', roomName);
               roomSet.add(roomKey);
@@ -276,6 +280,21 @@ export const fetchSensors = async (room) => {
         deviceClass: state.attributes.device_class || 'default'
       }));
     
+    // If no sensors found for room, return all sensors as fallback
+    if (sensors.length === 0) {
+      console.log('No sensors found for room, returning all sensors');
+      return states
+        .filter(state => state.entity_id.startsWith('sensor.'))
+        .map(state => ({
+          id: state.entity_id,
+          name: state.attributes.friendly_name || state.entity_id,
+          entityId: state.entity_id,
+          state: state.state,
+          unit: state.attributes.unit_of_measurement || '',
+          deviceClass: state.attributes.device_class || 'default'
+        }));
+    }
+    
     return sensors;
   } catch (error) {
     console.error('Error fetching sensors:', error);
@@ -367,22 +386,38 @@ export const fetchAppliances = async (room) => {
               entityRoom.includes(roomId.replace(/_/g, ' '))) {
             return true;
           }
-        }
-        
-        return false;
-      })
-      .map(state => ({
-        id: state.entity_id,
-        // Show both friendly name and entity_id for automation reference
-        name: state.attributes.friendly_name || state.entity_id,
-        entityId: state.entity_id,  // Logical name for automation
-        state: state.state,
-        type: state.entity_id.split('.')[0],
-        isOn: state.state === 'on',
-        lastChanged: state.last_changed
-      }));
-    
-    return appliances;
+          }
+          
+          return false;
+        })
+        .map(state => ({
+          id: state.entity_id,
+          // Show both friendly name and entity_id for automation reference
+          name: state.attributes.friendly_name || state.entity_id,
+          entityId: state.entity_id,  // Logical name for automation
+          state: state.state,
+          type: state.entity_id.split('.')[0],
+          isOn: state.state === 'on',
+          lastChanged: state.last_changed
+        }));
+      
+      // If no appliances found for room, return all as fallback
+      if (appliances.length === 0) {
+        console.log('No appliances found for room, returning all');
+        return states
+          .filter(state => applianceTypes.includes(state.entity_id.split('.')[0]))
+          .map(state => ({
+            id: state.entity_id,
+            name: state.attributes.friendly_name || state.entity_id,
+            entityId: state.entity_id,
+            state: state.state,
+            type: state.entity_id.split('.')[0],
+            isOn: state.state === 'on',
+            lastChanged: state.last_changed
+          }));
+      }
+      
+      return appliances;
   } catch (error) {
     console.error('Error fetching appliances:', error);
     throw error;

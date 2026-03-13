@@ -199,8 +199,8 @@ const Settings = () => {
                 placeholder="http://localhost:1234/v1"
               />
               <span className="form-hint">
-                For LMStudio: Use your host IP (e.g., <code>http://192.168.1.x:1234/v1</code>)<br/>
-                Or OpenAI-compatible API URL
+                For LMStudio: Use <code>http://host.docker.internal:6969/v1</code> from Docker<br/>
+                Or your host machine's IP address with /v1 suffix
               </span>
             </div>
 
