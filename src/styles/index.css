@@ -225,9 +225,28 @@ body {
   border-bottom: none;
 }
 
+.sensor-info, .appliance-info, .automation-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .sensor-name, .appliance-name, .automation-name {
   font-size: 14px;
   font-weight: 500;
+}
+
+.sensor-entity-id, .appliance-entity-id, .automation-entity-id {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: monospace;
+  opacity: 0.7;
+}
+
+.sensor-entity-id:hover, .appliance-entity-id:hover, .automation-entity-id:hover {
+  opacity: 1;
+  color: var(--primary-color);
+  cursor: pointer;
 }
 
 .sensor-state, .appliance-state, .automation-state {

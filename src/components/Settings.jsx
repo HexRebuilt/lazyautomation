@@ -63,9 +63,26 @@ const Settings = () => {
         if (!settings.llmApiUrl) {
           result = { success: false, message: 'LLM API URL not configured' };
         } else {
-          targetUrl = `${settings.llmApiUrl}/models`;
+          // Handle both LMStudio (/v1/models) and Ollama (/api/tags) endpoints
+          let targetUrl;
+          const isLMStudio = settings.llmApiUrl.includes('/v1') || settings.llmApiUrl.includes('lmstudio');
+          
+          if (isLMStudio) {
+            // LMStudio: http://192.168.0.205:6969/v1 -> /v1/models
+            targetUrl = settings.llmApiUrl.includes('/v1/models') 
+              ? settings.llmApiUrl 
+              : `${settings.llmApiUrl}/models`;
+          } else {
+            // Ollama: http://localhost:11434 -> /api/tags
+            targetUrl = settings.llmApiUrl.includes('/api/tags')
+              ? settings.llmApiUrl
+              : `${settings.llmApiUrl}/api/tags`;
+          }
+          
+          console.log('[Settings] Testing LLM connection:', targetUrl);
           const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
           const response = await fetch(proxyUrl);
+          console.log('[Settings] LLM response:', response.status);
           if (response.ok) {
             result = { success: true, message: 'Connected successfully!' };
           } else {

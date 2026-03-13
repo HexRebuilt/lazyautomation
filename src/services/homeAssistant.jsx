@@ -212,6 +212,20 @@ export const fetchSensors = async (room) => {
     const roomId = room.id.toLowerCase();
     const roomName = room.name.toLowerCase();
     
+    // Room name mappings (including Italian)
+    const roomNameVariations = {
+      'living_room': ['living room', 'soggiorno', 'sala'],
+      'bedroom': ['bedroom', 'camera da letto', 'camera'],
+      'kitchen': ['kitchen', 'cucina'],
+      'bathroom': ['bathroom', 'bagno'],
+      'office': ['office', 'ufficio', 'studio'],
+      'hallway': ['hallway', 'corridoio'],
+      'garage': ['garage', 'box'],
+      'garden': ['garden', 'giardino', 'veranda'],
+      'veranda': ['veranda'],
+      'server': ['server']
+    };
+    
     const sensors = states
       .filter(state => {
         const entityId = state.entity_id;
@@ -231,7 +245,17 @@ export const fetchSensors = async (room) => {
         const parts = entityId.split('.');
         if (parts.length >= 2) {
           const entityRoom = parts[1].toLowerCase();
-          // Match room_id or room name variations
+          
+          // Check against room name variations
+          for (const [key, variations] of Object.entries(roomNameVariations)) {
+            if (roomId === key || roomName.includes(key) || variations.some(v => roomName.includes(v))) {
+              if (entityRoom.includes(key) || variations.some(v => entityRoom.includes(v))) {
+                return true;
+              }
+            }
+          }
+          
+          // Original matching logic
           if (entityRoom === roomId || 
               entityRoom === roomId.replace(/_/g, ' ') ||
               roomName.includes(entityRoom) ||
@@ -244,7 +268,9 @@ export const fetchSensors = async (room) => {
       })
       .map(state => ({
         id: state.entity_id,
+        // Show both friendly name and entity_id for automation reference
         name: state.attributes.friendly_name || state.entity_id,
+        entityId: state.entity_id,  // Logical name for automation
         state: state.state,
         unit: state.attributes.unit_of_measurement || '',
         deviceClass: state.attributes.device_class || 'default'
@@ -257,11 +283,50 @@ export const fetchSensors = async (room) => {
   }
 };
 
+// Get all sensors (not filtered by room) - for automation use
+export const fetchAllSensors = async () => {
+  try {
+    const states = await hassFetch('/states');
+    
+    const sensors = states
+      .filter(state => state.entity_id.startsWith('sensor.'))
+      .map(state => ({
+        id: state.entity_id,
+        // Show both friendly name and entity_id for automation reference
+        name: state.attributes.friendly_name || state.entity_id,
+        entityId: state.entity_id,  // Logical name for automation
+        state: state.state,
+        unit: state.attributes.unit_of_measurement || '',
+        deviceClass: state.attributes.device_class || 'default',
+        lastChanged: state.last_changed
+      }));
+    
+    return sensors;
+  } catch (error) {
+    console.error('Error fetching all sensors:', error);
+    throw error;
+  }
+};
+
 export const fetchAppliances = async (room) => {
   try {
     const states = await hassFetch('/states');
     const roomId = room.id.toLowerCase();
     const roomName = room.name.toLowerCase();
+    
+    // Room name mappings (including Italian)
+    const roomNameVariations = {
+      'living_room': ['living room', 'soggiorno', 'sala'],
+      'bedroom': ['bedroom', 'camera da letto', 'camera'],
+      'kitchen': ['kitchen', 'cucina'],
+      'bathroom': ['bathroom', 'bagno'],
+      'office': ['office', 'ufficio', 'studio'],
+      'hallway': ['hallway', 'corridoio'],
+      'garage': ['garage', 'box'],
+      'garden': ['garden', 'giardino', 'veranda'],
+      'veranda': ['veranda'],
+      'server': ['server']
+    };
     
     const applianceTypes = ['light', 'switch', 'plug', 'outlet', 'fan', 'climate', 'cover', 'lock', 'media_player', 'vacuum'];
     
@@ -285,7 +350,17 @@ export const fetchAppliances = async (room) => {
         const parts = entityId.split('.');
         if (parts.length >= 2) {
           const entityRoom = parts[1].toLowerCase();
-          // Match room_id or room name variations
+          
+          // Check against room name variations
+          for (const [key, variations] of Object.entries(roomNameVariations)) {
+            if (roomId === key || roomName.includes(key) || variations.some(v => roomName.includes(v))) {
+              if (entityRoom.includes(key) || variations.some(v => entityRoom.includes(v))) {
+                return true;
+              }
+            }
+          }
+          
+          // Original matching logic
           if (entityRoom === roomId || 
               entityRoom === roomId.replace(/_/g, ' ') ||
               roomName.includes(entityRoom) ||
@@ -298,10 +373,13 @@ export const fetchAppliances = async (room) => {
       })
       .map(state => ({
         id: state.entity_id,
+        // Show both friendly name and entity_id for automation reference
         name: state.attributes.friendly_name || state.entity_id,
+        entityId: state.entity_id,  // Logical name for automation
         state: state.state,
         type: state.entity_id.split('.')[0],
-        isOn: state.state === 'on'
+        isOn: state.state === 'on',
+        lastChanged: state.last_changed
       }));
     
     return appliances;

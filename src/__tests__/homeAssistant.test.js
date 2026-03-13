@@ -93,6 +93,27 @@ describe('Home Assistant Service', () => {
       expect(rooms.map(r => r.id)).toContain('living_room');
     });
 
+    it('should detect rooms from Italian entity IDs', async () => {
+      const mockStates = [
+        { entity_id: 'media_player.cucina', attributes: {}, state: 'playing' },
+        { entity_id: 'light.soggiorno', attributes: {}, state: 'on' },
+        { entity_id: 'sensor.camera_da_letto_temp', attributes: {}, state: '22' }
+      ];
+
+      fetch.mockResolvedValueOnce(mockStates);
+      fetch.mockResolvedValueOnce([]); // empty areas
+      fetch.mockResolvedValueOnce([]); // config/areas
+      fetch.mockResolvedValueOnce([]); // area_registry
+
+      const rooms = await fetchRooms();
+
+      // Should detect cucina (kitchen), soggiorno (living room), camera_da_letto (bedroom)
+      const roomIds = rooms.map(r => r.id);
+      expect(roomIds).toContain('cucina');
+      expect(roomIds).toContain('soggiorno');
+      expect(roomIds).toContain('camera_da_letto');
+    });
+
     it('should NOT return domain types as rooms', async () => {
       const mockStates = [
         { entity_id: 'sensor.test', attributes: {}, state: 'test' },
@@ -103,6 +124,8 @@ describe('Home Assistant Service', () => {
 
       fetch.mockResolvedValueOnce(mockStates);
       fetch.mockResolvedValueOnce([]); // empty areas
+      fetch.mockResolvedValueOnce([]); // config/areas
+      fetch.mockResolvedValueOnce([]); // area_registry
 
       const rooms = await fetchRooms();
 
@@ -119,6 +142,8 @@ describe('Home Assistant Service', () => {
 
       fetch.mockResolvedValueOnce(mockStates);
       fetch.mockResolvedValueOnce([]); // empty areas
+      fetch.mockResolvedValueOnce([]); // config/areas
+      fetch.mockResolvedValueOnce([]); // area_registry
 
       const rooms = await fetchRooms();
 
@@ -174,6 +199,22 @@ describe('Home Assistant Service', () => {
       expect(sensors).toHaveLength(1);
       expect(sensors[0].id).toBe('sensor.bedroom_temp');
     });
+
+    it('should include entityId for automation reference', async () => {
+      const mockStates = [
+        { 
+          entity_id: 'sensor.kitchen_temp', 
+          attributes: { friendly_name: 'Kitchen Temperature', unit_of_measurement: '°C' },
+          state: '20'
+        }
+      ];
+
+      fetch.mockResolvedValueOnce(mockStates);
+
+      const sensors = await fetchSensors({ id: 'kitchen', name: 'Kitchen' });
+
+      expect(sensors[0].entityId).toBe('sensor.kitchen_temp');
+    });
   });
 
   describe('fetchAppliances', () => {
@@ -197,6 +238,43 @@ describe('Home Assistant Service', () => {
 
       expect(appliances).toHaveLength(1);
       expect(appliances[0].id).toBe('light.bedroom_ceiling');
+    });
+
+    it('should detect appliances by Italian room names', async () => {
+      const mockStates = [
+        { 
+          entity_id: 'light.cucina', 
+          attributes: { friendly_name: 'Kitchen Light' },
+          state: 'on'
+        },
+        { 
+          entity_id: 'media_player.soggiorno', 
+          attributes: { friendly_name: 'Living Room TV' },
+          state: 'playing'
+        }
+      ];
+
+      fetch.mockResolvedValueOnce(mockStates);
+
+      const appliances = await fetchAppliances({ id: 'cucina', name: 'Kitchen' });
+
+      expect(appliances.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should include entityId for automation reference', async () => {
+      const mockStates = [
+        { 
+          entity_id: 'switch.casa', 
+          attributes: { friendly_name: 'House Switch' },
+          state: 'on'
+        }
+      ];
+
+      fetch.mockResolvedValueOnce(mockStates);
+
+      const appliances = await fetchAppliances({ id: 'casa', name: 'Casa' });
+
+      expect(appliances[0].entityId).toBeDefined();
     });
   });
 });

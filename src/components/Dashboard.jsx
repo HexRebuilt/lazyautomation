@@ -11,7 +11,12 @@ const Dashboard = ({ sensors, appliances, automations, roomName }) => {
           <ul className="sensor-list">
             {sensors.map(sensor => (
               <li key={sensor.id} className="sensor-item">
-                <span className="sensor-name">{sensor.name}</span>
+                <div className="sensor-info">
+                  <span className="sensor-name">{sensor.name}</span>
+                  <span className="sensor-entity-id" title="Entity ID for automation">
+                    {sensor.entityId || sensor.id}
+                  </span>
+                </div>
                 <span className="sensor-state">
                   {sensor.state} {sensor.unit}
                 </span>
@@ -29,7 +34,12 @@ const Dashboard = ({ sensors, appliances, automations, roomName }) => {
           <ul className="appliance-list">
             {appliances.map(appliance => (
               <li key={appliance.id} className="appliance-item">
-                <span className="appliance-name">{appliance.name}</span>
+                <div className="appliance-info">
+                  <span className="appliance-name">{appliance.name}</span>
+                  <span className="appliance-entity-id" title="Entity ID for automation">
+                    {appliance.entityId || appliance.id}
+                  </span>
+                </div>
                 <span className={`status-badge ${appliance.isOn ? 'active' : 'inactive'}`}>
                   {appliance.isOn ? 'ON' : 'OFF'}
                 </span>
@@ -47,7 +57,12 @@ const Dashboard = ({ sensors, appliances, automations, roomName }) => {
           <ul className="automation-list">
             {automations.map(automation => (
               <li key={automation.id} className="automation-item">
-                <span className="automation-name">{automation.name}</span>
+                <div className="automation-info">
+                  <span className="automation-name">{automation.name}</span>
+                  <span className="automation-entity-id" title="Entity ID for automation">
+                    {automation.id}
+                  </span>
+                </div>
                 <span className={`status-badge ${automation.state === 'enabled' ? 'active' : 'inactive'}`}>
                   {automation.state}
                 </span>

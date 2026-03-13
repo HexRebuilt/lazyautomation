@@ -7,8 +7,18 @@ const ollamaFetch = async (endpoint, options = {}) => {
     throw new Error('Ollama host not configured');
   }
   
-  const targetUrl = `${config.host}${endpoint}`;
+  // Determine if this is LMStudio/OAI-compatible endpoint
+  const isOAICompatible = config.host.includes('/v1') || config.host.includes('lmstudio');
+  
+  // Use appropriate endpoint based on server type
+  let apiEndpoint = endpoint;
+  if (isOAICompatible && endpoint === '/api/tags') {
+    apiEndpoint = '/v1/models';  // LMStudio uses /v1/models not /api/tags
+  }
+  
+  const targetUrl = `${config.host}${apiEndpoint}`;
   const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
+  console.log('[Ollama/LMStudio] Fetching:', proxyUrl);
   
   const response = await fetch(proxyUrl, {
     ...options,
@@ -27,7 +37,16 @@ const ollamaFetch = async (endpoint, options = {}) => {
 
 export const checkOllamaConnection = async () => {
   try {
-    await ollamaFetch('/api/tags');
+    // Try both Ollama and LMStudio endpoints
+    const config = getOllamaConfig();
+    if (!config.host) {
+      return { connected: false, error: 'Ollama host not configured' };
+    }
+    
+    const isOAICompatible = config.host.includes('/v1') || config.host.includes('lmstudio');
+    const endpoint = isOAICompatible ? '/v1/models' : '/api/tags';
+    
+    await ollamaFetch(endpoint);
     return { connected: true, error: null };
   } catch (error) {
     return { 
@@ -39,10 +58,19 @@ export const checkOllamaConnection = async () => {
 
 export const getOllamaModels = async () => {
   try {
-    const data = await ollamaFetch('/api/tags');
+    const config = getOllamaConfig();
+    const isOAICompatible = config.host.includes('/v1') || config.host.includes('lmstudio');
+    const endpoint = isOAICompatible ? '/v1/models' : '/api/tags';
+    
+    const data = await ollamaFetch(endpoint);
+    
+    // Handle both Ollama and LMStudio response formats
+    if (isOAICompatible) {
+      return data.data || [];
+    }
     return data.models || [];
   } catch (error) {
-    console.error('Error fetching Ollama models:', error);
+    console.error('Error fetching models:', error);
     return [];
   }
 };
