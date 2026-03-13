@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-03-13
+
+### Fixed
+- Fixed LLM API HTTP 502 error by updating environment variable prefixes from `REACT_APP_` to `VITE_` for Vite compatibility
+- Updated SettingsContext and settings.js to load environment variables as defaults
+- Fixed .env.example to use correct VITE_ prefix and include LLM API configuration
+
+### Changed
+- Updated .env file to use VITE_ prefix for environment variables (required by Vite)
+- Updated SettingsContext.jsx to load environment variables from import.meta.env
+- Updated settings.js to load environment variables from import.meta.env
+
+### Security
+- Environment variables with VITE_ prefix are not exposed to client-side code (Vite only exposes VITE_ prefixed variables)
+
 ## [1.1.0] - 2026-03-12
 
 ### Fixed

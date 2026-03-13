@@ -3,12 +3,12 @@
 
 export const getSettings = () => {
   const defaultSettings = {
-    hassHost: '',
-    hassToken: '',
+    hassHost: import.meta.env.VITE_HASS_HOST || '',
+    hassToken: import.meta.env.VITE_HASS_TOKEN || '',
     ollamaHost: 'http://localhost:11434',
-    llmApiUrl: '',
-    llmApiKey: '',
-    useLocalApi: true,
+    llmApiUrl: import.meta.env.VITE_LLM_API_URL || '',
+    llmApiKey: import.meta.env.VITE_LLM_API_KEY || '',
+    useLocalApi: import.meta.env.VITE_USE_LOCAL_API === 'true' || false,
   };
   
   try {

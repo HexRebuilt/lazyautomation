@@ -1,5 +1,35 @@
 # Todos for LazyAutomation
 
+0. **LLM API Fix:**
+    - [x] ## Task: Fix LLM API HTTP 502 Error
+        **Goal**: Resolve the HTTP 502 error when connecting to LMStudio API through nginx reverse proxy to enable local LLM parsing of Home Assistant entities.
+        
+        **Files involved**:
+        - .env: Contains VITE_LLM_API_URL=https://lmstudionvidia.hexrebuilt.xyz/v1
+        - src/services/llm.jsx: LLM service implementation that uses proxy
+        - src/components/Settings.jsx: Settings UI for LLM configuration
+        - server.cjs: Node.js proxy server that forwards /api/proxy/* requests
+        
+        **Completion criteria**:
+        - [x] LLM API returns successful responses instead of HTTP 502
+        - [x] Connection to LMStudio works through the proxy
+        - [x] Natural language processing of Home Assistant entities functions correctly
+        - [x] No regression in other API connections (Home Assistant, Ollama)
+        
+        **Steps**:
+        - [x] 1. Verify LMStudio service is running on host machine and accessible on the expected port
+        - [x] 2. Check nginx proxy configuration to ensure it properly forwards to LMStudio
+        - [x] 3. Test direct connection to LMStudio API to confirm service availability
+        - [x] 4. Test connection through the application's proxy endpoint (/api/proxy/)
+        - [x] 5. Verify .env configuration matches actual LMStudio endpoint
+        - [x] 6. Check if USE_LOCAL_API setting is incorrectly causing fallback to Ollama
+        - [x] 7. Examine server.cjs proxy implementation for potential issues
+        - [x] 8. Test LLM connection through Settings UI to isolate the problem
+        - [x] 9. Fix any misconfiguration in proxy settings or service URLs
+        - [x] 10. Verify fix works for natural language processing of Home Assistant entities
+        
+        **Resolution**: Updated .env file to use VITE_ prefix for environment variables (required by Vite). Updated SettingsContext and settings.js to load environment variables as defaults. The LMStudio API is now accessible through the proxy endpoint.
+
 1. **Documentation:**
     - [x] Create a README.md file with project details.
     - [ ] Create a CONTRIBUTING.md file with contribution guidelines.
