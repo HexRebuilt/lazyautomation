@@ -35,15 +35,16 @@ export const fetchRooms = async () => {
   try {
     const states = await hassFetch('/states');
     console.log('Total entities loaded:', states.length);
-    console.log('Sample entities:', states.slice(0, 5).map(s => s.entity_id));
     
-    // Try to get areas from Home Assistant API - try multiple endpoints
+    const rooms = [];
+    const roomSet = new Set(); // Use Set for deduplication
+    
+    // Priority 1: Get areas from Home Assistant API
     let areas = [];
     const areaEndpoints = ['/areas', '/config/areas', '/area_registry'];
     
     for (const endpoint of areaEndpoints) {
       try {
-        console.log('Trying area endpoint:', endpoint);
         areas = await hassFetch(endpoint);
         if (areas && areas.length > 0) {
           console.log('Found areas from:', endpoint, areas);
@@ -54,155 +55,51 @@ export const fetchRooms = async () => {
       }
     }
     
-    const rooms = [];
-    const roomSet = new Set();
-    
-    // Priority 1: Use areas from HA API (MOST RELIABLE)
+    // Add areas from HA API - use the original name from HA
     if (areas && areas.length > 0) {
-      console.log('Found areas from HA API:', areas);
       areas.forEach(area => {
-        if (!roomSet.has(area.area_id)) {
-          roomSet.add(area.area_id);
+        const normalizedName = (area.name || area.area_id).toLowerCase().trim();
+        if (!roomSet.has(normalizedName)) {
+          roomSet.add(normalizedName);
           rooms.push({
             id: area.area_id,
-            name: area.name || area.area_id,
+            name: area.name || area.area_id, // Keep original name from HA
             icon: getRoomIcon(area.area_id)
           });
         }
       });
       
-      // If we got rooms from areas, return them (sorted)
+      // If we got rooms from areas, return them (sorted by original name)
       if (rooms.length > 0) {
         rooms.sort((a, b) => a.name.localeCompare(b.name));
+        console.log('Rooms from HA API:', rooms);
         return rooms;
       }
     }
     
-    // Priority 2: Use area_id OR room_id from entity attributes
-    console.log('===== STARTING ROOM DETECTION =====');
-    console.log('Trying area_id and room_id from entity attributes...');
+    // Priority 2: Extract unique area_ids from entity attributes
+    console.log('===== EXTRACTING ROOMS FROM ENTITIES =====');
     
-    // Find ALL entities with room_id
-    const roomIdEntities = states.filter(s => s.attributes?.room_id);
-    console.log('Entities with room_id:', roomIdEntities.map(e => ({ entity: e.entity_id, room_id: e.attributes.room_id })));
-    
-    // Map room_id to room names (based on what we found in your HA)
-    const roomIdToName = {
-      1: 'Kitchen',
-      2: 'Living Room',
-      3: 'Hallway',
-      4: 'Bedroom',
-      7: 'Bathroom'
-    };
-    
-    // First pass: collect rooms from area_id/room_id attributes
     states.forEach(state => {
       const areaId = state.attributes?.area_id;
-      const roomId = state.attributes?.room_id;
-      
-      // Use area_id if available
-      if (areaId && !roomSet.has(areaId)) {
-        console.log('Found area_id:', areaId, 'from entity:', state.entity_id);
-        roomSet.add(areaId);
-        rooms.push({
-          id: areaId,
-          name: areaId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-          icon: getRoomIcon(areaId)
-        });
-      }
-      // Otherwise use room_id if available (but skip vacuum rooms)
-      else if (roomId !== undefined && roomId !== null && !roomSet.has('room_' + roomId)) {
-        // Skip vacuum room_ids - they don't represent actual house areas
-        if (!['1', '2', '3', '4', '7'].includes(String(roomId))) {
-          const roomName = roomIdToName[roomId] || `Room ${roomId}`;
-          console.log('Found room_id:', roomId, '->', roomName, 'from entity:', state.entity_id);
-          roomSet.add('room_' + roomId);
+      if (areaId) {
+        const normalizedName = areaId.toLowerCase().trim();
+        if (!roomSet.has(normalizedName)) {
+          roomSet.add(normalizedName);
           rooms.push({
-            id: 'room_' + roomId,
-            name: roomName,
-            icon: getRoomIcon(roomName.toLowerCase().replace(' ', '_'))
+            id: areaId,
+            name: areaId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+            icon: getRoomIcon(areaId)
           });
         }
       }
     });
     
-    console.log('Rooms found after attribute detection:', rooms);
+    console.log('Rooms found:', rooms);
+    console.log('===== END ROOM EXTRACTION =====');
     
-    // Priority 3: Extract from entity IDs - include Italian room names
-    console.log('Extracting rooms from entity IDs...');
-    
-    // Room name mappings (English and Italian)
-    const roomMappings = {
-      // English
-      'living_room': 'Living Room',
-      'bedroom': 'Bedroom',
-      'kitchen': 'Kitchen',
-      'bathroom': 'Bathroom',
-      'office': 'Office',
-      'garage': 'Garage',
-      'garden': 'Garden',
-      'hallway': 'Hallway',
-      'dining': 'Dining Room',
-      'basement': 'Basement',
-      'attic': 'Attic',
-      'laundry': 'Laundry',
-      // Italian
-      'soggiorno': 'Living Room',
-      'camera_da_letto': 'Bedroom',
-      'cucina': 'Kitchen',
-      'bagno': 'Bathroom',
-      'ufficio': 'Office',
-      'garage': 'Garage',
-      'giardino': 'Garden',
-      'corridoio': 'Hallway',
-      'sala': 'Living Room',
-      'veranda': 'Veranda',
-      'box': 'Box',
-      'soffitta': 'Attic',
-      'cantina': 'Basement',
-      'lavanderia': 'Laundry',
-      'studio': 'Office',
-      'server': 'Server'
-    };
-    
-    states.forEach(state => {
-      const entityId = state.entity_id.toLowerCase();
-      const parts = entityId.split('.');
-      if (parts.length >= 2) {
-        const entityName = parts[1];
-        
-        // Check if entity name matches any known room
-        for (const [roomKey, roomName] of Object.entries(roomMappings)) {
-          // Skip "camera" matching when it's part of "camera_di_stampa" (print chamber)
-          if (roomKey === 'camera_da_letto' && entityName.includes('camera_di_stampa')) {
-            continue;
-          }
-          // Match exact or with underscore prefix
-          if (entityName === roomKey || entityName.startsWith(roomKey + '_') || entityName.includes('_' + roomKey)) {
-            if (!roomSet.has(roomKey)) {
-              console.log('Found room from entity ID:', entityId, '->', roomKey, '=', roomName);
-              roomSet.add(roomKey);
-              rooms.push({
-                id: roomKey,
-                name: roomName,
-                icon: getRoomIcon(roomKey)
-              });
-            }
-          }
-        }
-      }
-    });
-    
-    console.log('Rooms found after entity ID detection:', rooms);
-    console.log('===== END ROOM DETECTION =====');
-    
-    // Sort rooms alphabetically
+    // Sort and return
     rooms.sort((a, b) => a.name.localeCompare(b.name));
-    
-    if (rooms.length === 0) {
-      return getDefaultRooms();
-    }
-    
     return rooms;
   } catch (error) {
     console.error('Error fetching rooms:', error);
@@ -216,21 +113,6 @@ export const fetchSensors = async (room) => {
     const roomId = room.id.toLowerCase();
     const roomName = room.name.toLowerCase();
     
-    // Strict room name mappings - only match exact room names in entity ID
-    const roomNameVariations = {
-      'living_room': ['living_room', 'soggiorno', 'sala'],
-      'bedroom': ['bedroom', 'camera_da_letto'],
-      'kitchen': ['kitchen', 'cucina'],
-      'bathroom': ['bathroom', 'bagno'],
-      'office': ['office', 'ufficio', 'studio'],
-      'hallway': ['hallway', 'corridoio'],
-      'garage': ['garage'],
-      'box': ['box'],
-      'garden': ['garden', 'giardino'],
-      'veranda': ['veranda'],
-      'server': ['server']
-    };
-    
     const sensors = states
       .filter(state => {
         const entityId = state.entity_id;
@@ -239,28 +121,22 @@ export const fetchSensors = async (room) => {
         // Only process sensor entities
         if (!entityId.startsWith('sensor.')) return false;
         
-        // Check by area_id (preferred method in HA)
+        // Check by area_id (preferred method in HA) - this works for any language
         const areaId = attributes?.area_id;
-        if (areaId && areaId.toLowerCase() === roomId) return true;
+        if (areaId) {
+          const areaIdLower = areaId.toLowerCase();
+          // Match by area_id directly
+          if (areaIdLower === roomId) return true;
+          // Match by area name in any language
+          if (areaIdLower === roomName) return true;
+          // Partial match (area_id contains room name or vice versa)
+          if (areaIdLower.includes(roomName) || roomName.includes(areaIdLower)) return true;
+        }
         
-        // Also check if area_id contains the room name
-        if (areaId && areaId.toLowerCase().includes(roomName)) return true;
-        
-        // Check entity ID for room match
-        const parts = entityId.split('.');
-        if (parts.length >= 2) {
-          const entityRoom = parts[1].toLowerCase();
-          
-          // Get variations for the current room
-          const variations = roomNameVariations[roomId] || [];
-          
-          // Check if entity room starts with or exactly matches room variations
-          for (const variation of variations) {
-            // Match exact or with underscore (e.g., "cucina" or "cucina_temp")
-            if (entityRoom === variation || entityRoom.startsWith(variation + '_')) {
-              return true;
-            }
-          }
+        // Also check entity ID for room match (legacy fallback)
+        const entityRoom = entityId.split('.')[1]?.toLowerCase();
+        if (entityRoom && (entityRoom.startsWith(roomId) || roomId.startsWith(entityRoom))) {
+          return true;
         }
         
         return false;
@@ -313,21 +189,6 @@ export const fetchAppliances = async (room) => {
     const roomId = room.id.toLowerCase();
     const roomName = room.name.toLowerCase();
     
-    // Strict room name mappings
-    const roomNameVariations = {
-      'living_room': ['living_room', 'soggiorno', 'sala'],
-      'bedroom': ['bedroom', 'camera_da_letto'],
-      'kitchen': ['kitchen', 'cucina'],
-      'bathroom': ['bathroom', 'bagno'],
-      'office': ['office', 'ufficio', 'studio'],
-      'hallway': ['hallway', 'corridoio'],
-      'garage': ['garage'],
-      'box': ['box'],
-      'garden': ['garden', 'giardino'],
-      'veranda': ['veranda'],
-      'server': ['server']
-    };
-    
     const applianceTypes = ['light', 'switch', 'plug', 'outlet', 'fan', 'climate', 'cover', 'lock', 'media_player', 'vacuum'];
     
     const appliances = states
@@ -339,27 +200,22 @@ export const fetchAppliances = async (room) => {
         const domain = entityId.split('.')[0];
         if (!applianceTypes.includes(domain)) return false;
         
-        // Check by area_id (preferred method in HA)
+        // Check by area_id (preferred method in HA) - this works for any language
         const areaId = attributes?.area_id;
-        if (areaId && areaId.toLowerCase() === roomId) return true;
+        if (areaId) {
+          const areaIdLower = areaId.toLowerCase();
+          // Match by area_id directly
+          if (areaIdLower === roomId) return true;
+          // Match by area name in any language
+          if (areaIdLower === roomName) return true;
+          // Partial match (area_id contains room name or vice versa)
+          if (areaIdLower.includes(roomName) || roomName.includes(areaIdLower)) return true;
+        }
         
-        // Also check if area_id contains the room name
-        if (areaId && areaId.toLowerCase().includes(roomName)) return true;
-        
-        // Check entity ID for room match
-        const parts = entityId.split('.');
-        if (parts.length >= 2) {
-          const entityRoom = parts[1].toLowerCase();
-          
-          // Get variations for the current room
-          const variations = roomNameVariations[roomId] || [];
-          
-          // Check if entity room starts with or exactly matches room variations
-          for (const variation of variations) {
-            if (entityRoom === variation || entityRoom.startsWith(variation + '_')) {
-              return true;
-            }
-          }
+        // Also check entity ID for room match (legacy fallback)
+        const entityRoom = entityId.split('.')[1]?.toLowerCase();
+        if (entityRoom && (entityRoom.startsWith(roomId) || roomId.startsWith(entityRoom))) {
+          return true;
         }
         
         return false;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, fetchAllAutomations, checkHassConnection } from './services/homeAssistant.jsx';
+import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, fetchAllAutomations, fetchAllSensors, checkHassConnection } from './services/homeAssistant.jsx';
 import { checkOllamaConnection } from './services/ollama.jsx';
 import useTheme from './hooks/useTheme.jsx';
 import { SettingsProvider } from './context/SettingsContext.jsx';
@@ -7,6 +7,7 @@ import Header from './components/Header.jsx';
 import RoomSelector from './components/RoomSelector.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import AutomationsPanel from './components/AutomationsPanel.jsx';
+import AIPanel from './components/AIPanel.jsx';
 import Settings from './components/Settings.jsx';
 import './styles/index.css';
 
@@ -19,6 +20,8 @@ function AppContent() {
   const [appliances, setAppliances] = useState([]);
   const [automations, setAutomations] = useState([]);
   const [allAutomations, setAllAutomations] = useState({});
+  const [allSensors, setAllSensors] = useState([]);
+  const [allAppliances, setAllAppliances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hassStatus, setHassStatus] = useState('connecting');
@@ -64,6 +67,23 @@ function AppContent() {
       }
     };
     loadAllAutomations();
+  }, []);
+
+  // Load all sensors and appliances for AI context
+  useEffect(() => {
+    const loadAllEntities = async () => {
+      try {
+        const [sensorsData, appliancesData] = await Promise.all([
+          fetchAllSensors(),
+          fetchAllSensors() // Will add fetchAllAppliances later
+        ]);
+        setAllSensors(sensorsData);
+        // setAllAppliances(appliancesData); // TODO: add fetchAllAppliances
+      } catch (err) {
+        console.error('Failed to load all entities:', err);
+      }
+    };
+    loadAllEntities();
   }, []);
 
   useEffect(() => {
@@ -159,6 +179,14 @@ function AppContent() {
             
             <aside className="home-sidebar">
               <AutomationsPanel automations={allAutomations} />
+              <AIPanel 
+                room={selectedRoom}
+                sensors={sensors}
+                appliances={appliances}
+                automations={automations}
+                allSensors={allSensors}
+                allAppliances={allAppliances}
+              />
             </aside>
           </div>
         )}
