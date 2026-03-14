@@ -8,10 +8,9 @@ All notable changes to this project will be documented in this file.
 - Fixed LLM API HTTP 502 error by updating environment variable prefixes from `REACT_APP_` to `VITE_` for Vite compatibility
 - Updated SettingsContext and settings.js to load environment variables as defaults
 - Fixed .env.example to use correct VITE_ prefix and include LLM API configuration
-- Fixed room selection by adding fallback to extract rooms from entity IDs when area_id is not available
+- Fixed room selection to ONLY show Home Assistant rooms, never extract fallback rooms from entity IDs
 - Added support for Italian room names in entity ID extraction (soggiorno, cucina, camera_da_letto, etc.)
-- Prioritized Home Assistant rooms over fallback extraction (only uses entity ID fallback when no Home Assistant rooms are available)
-- Removed placeholder rooms when Home Assistant has area_id support but no areas configured
+- Removed placeholder rooms when Home Assistant provides any rooms
 - Fixed LLM API URL handling to avoid duplicate /v1 in endpoint URLs
 
 ### Added
