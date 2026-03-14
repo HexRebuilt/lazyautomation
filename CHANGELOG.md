@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - Fixed room selection by adding fallback to extract rooms from entity IDs when area_id is not available
 - Added support for Italian room names in entity ID extraction (soggiorno, cucina, camera_da_letto, etc.)
 - Prioritized Home Assistant rooms over fallback extraction (only uses entity ID fallback when no Home Assistant rooms are available)
+- Removed placeholder rooms when Home Assistant has area_id support but no areas configured
+- Fixed LLM API URL handling to avoid duplicate /v1 in endpoint URLs
 
 ### Added
 - Model dropdown selector in Settings with server status indicator
