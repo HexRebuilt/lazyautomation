@@ -100,6 +100,7 @@ export const fetchRooms = async () => {
     });
     
     // If we found rooms from area_id, return them (sorted by name)
+    // DO NOT extract rooms from entity IDs if we have any area_id rooms
     if (rooms.length > 0) {
       rooms.sort((a, b) => a.name.localeCompare(b.name));
       console.log('Rooms from area_id:', rooms);
@@ -108,20 +109,8 @@ export const fetchRooms = async () => {
     }
     
     // Priority 3: Extract rooms from entity IDs (fallback for systems without area_id)
-    // Check if we have any entities with area_id attributes (even if they're null/empty)
-    const hasAreaIdEntities = states.some(state => state.attributes && 'area_id' in state.attributes);
-    
-    if (hasAreaIdEntities) {
-      // We have entities with area_id attributes, but they're all null/empty
-      // This means Home Assistant has area support but no areas are configured
-      // In this case, DON'T show fallback rooms - return empty array
-      console.log('Home Assistant has area_id support but no areas configured. Not showing fallback rooms.');
-      console.log('===== END ROOM EXTRACTION =====');
-      return [];
-    }
-    
-    // Only extract rooms from entity IDs if we have no area_id entities at all
-    console.log('No area_id entities found, extracting rooms from entity IDs...');
+    // ONLY do this if we have NO rooms from Home Assistant at all
+    console.log('No rooms from Home Assistant, extracting rooms from entity IDs...');
     
     // Common room patterns in Italian and English
     const roomPatterns = [
