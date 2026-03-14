@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, fetchAllAutomations, fetchAllSensors, checkHassConnection } from './services/homeAssistant.jsx';
+import { fetchRooms, fetchSensors, fetchAppliances, fetchAutomations, fetchAllAutomations, fetchAllSensors, fetchAllDevices, checkHassConnection } from './services/homeAssistant.jsx';
 import { checkOllamaConnection } from './services/ollama.jsx';
 import useTheme from './hooks/useTheme.jsx';
 import { SettingsProvider } from './context/SettingsContext.jsx';
@@ -21,7 +21,7 @@ function AppContent() {
   const [automations, setAutomations] = useState([]);
   const [allAutomations, setAllAutomations] = useState({});
   const [allSensors, setAllSensors] = useState([]);
-  const [allAppliances, setAllAppliances] = useState([]);
+  const [allDevices, setAllDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hassStatus, setHassStatus] = useState('connecting');
@@ -69,16 +69,16 @@ function AppContent() {
     loadAllAutomations();
   }, []);
 
-  // Load all sensors and appliances for AI context
+  // Load all sensors and devices for AI context
   useEffect(() => {
     const loadAllEntities = async () => {
       try {
-        const [sensorsData, appliancesData] = await Promise.all([
+        const [sensorsData, devicesData] = await Promise.all([
           fetchAllSensors(),
-          fetchAllSensors() // Will add fetchAllAppliances later
+          fetchAllDevices()
         ]);
         setAllSensors(sensorsData);
-        // setAllAppliances(appliancesData); // TODO: add fetchAllAppliances
+        setAllDevices(devicesData);
       } catch (err) {
         console.error('Failed to load all entities:', err);
       }
@@ -169,6 +169,8 @@ function AppContent() {
                   appliances={appliances}
                   automations={automations}
                   roomName={selectedRoom.name}
+                  allDevices={allDevices}
+                  allSensors={allSensors}
                 />
               )}
               
@@ -185,7 +187,7 @@ function AppContent() {
                 appliances={appliances}
                 automations={automations}
                 allSensors={allSensors}
-                allAppliances={allAppliances}
+                allAppliances={allDevices}
               />
             </aside>
           </div>

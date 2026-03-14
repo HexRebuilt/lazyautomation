@@ -3,7 +3,7 @@ import { llmService } from '../services/llm.jsx';
 import ModelSelector from './ModelSelector.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
 
-const AIPanel = ({ room, sensors, appliances, automations, allSensors, allAppliances }) => {
+const AIPanel = ({ room, sensors, appliances, automations, allSensors, allDevices }) => {
   const { settings, updateSettings } = useSettings();
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
@@ -54,7 +54,7 @@ const AIPanel = ({ room, sensors, appliances, automations, allSensors, allApplia
     setActiveTab('reason');
 
     try {
-      const result = await llmService.reasonAboutRoomContext(room, allSensors, allAppliances);
+      const result = await llmService.reasonAboutRoomContext(room, allSensors, allDevices);
       setResponse(result);
     } catch (err) {
       setError(err.message);

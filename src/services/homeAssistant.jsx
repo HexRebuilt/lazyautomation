@@ -108,9 +108,9 @@ export const fetchRooms = async () => {
       return rooms;
     }
     
-    // Priority 3: Extract rooms from entity IDs (fallback for systems without area_id)
+    // Priority 3: Extract rooms from friendly_name attributes (fallback for systems without area_id)
     // ONLY do this if we have NO rooms from Home Assistant at all
-    console.log('No rooms from Home Assistant, extracting rooms from entity IDs...');
+    console.log('No rooms from Home Assistant, extracting rooms from friendly_name attributes...');
     
     // Common room patterns in Italian and English
     const roomPatterns = [
@@ -124,15 +124,37 @@ export const fetchRooms = async () => {
       'terrace', 'balcony', 'garden', 'porch'
     ];
     
+    // Device patterns to exclude from room extraction
+    const devicePatterns = [
+      'p1s', 'printer', 'camera', 'monitor', 'tv', 'speaker', 'media_player',
+      'vacuum', 'robot', 'sensor', 'switch', 'light', 'plug', 'outlet'
+    ];
+    
     states.forEach(state => {
+      const friendlyName = state.attributes?.friendly_name;
       const entityId = state.entity_id;
-      const parts = entityId.split('.');
-      if (parts.length >= 2) {
-        const entityName = parts[1].toLowerCase();
+      
+      if (friendlyName && entityId) {
+        const friendlyNameLower = friendlyName.toLowerCase();
+        const entityIdLower = entityId.toLowerCase();
         
-        // Check if entity name contains any room pattern
+        // Skip if this is a device (not a room)
+        let isDevice = false;
+        for (const devicePattern of devicePatterns) {
+          if (entityIdLower.includes(devicePattern) || friendlyNameLower.includes(devicePattern)) {
+            isDevice = true;
+            break;
+          }
+        }
+        
+        if (isDevice) {
+          console.log('Skipping device:', friendlyName, entityId);
+          return;
+        }
+        
+        // Check if friendly_name contains any room pattern
         for (const pattern of roomPatterns) {
-          if (entityName.includes(pattern)) {
+          if (friendlyNameLower.includes(pattern)) {
             const normalizedName = pattern.toLowerCase().trim();
             if (!roomSet.has(normalizedName)) {
               roomSet.add(normalizedName);
@@ -148,7 +170,7 @@ export const fetchRooms = async () => {
       }
     });
     
-    console.log('Rooms extracted from entity IDs:', rooms);
+    console.log('Rooms extracted from friendly_name:', rooms);
     console.log('===== END ROOM EXTRACTION =====');
     
     // Sort and return
@@ -232,6 +254,34 @@ export const fetchAllSensors = async () => {
     return sensors;
   } catch (error) {
     console.error('Error fetching all sensors:', error);
+    throw error;
+  }
+};
+
+// Get all devices (appliances) - for "Devices" section
+export const fetchAllDevices = async () => {
+  try {
+    const states = await hassFetch('/states');
+    
+    const deviceTypes = ['light', 'switch', 'plug', 'outlet', 'fan', 'climate', 'cover', 'lock', 'media_player', 'vacuum'];
+    
+    const devices = states
+      .filter(state => {
+        const domain = state.entity_id.split('.')[0];
+        return deviceTypes.includes(domain);
+      })
+      .map(state => ({
+        id: state.entity_id,
+        name: state.attributes.friendly_name || state.entity_id,
+        entityId: state.entity_id,
+        state: state.state,
+        deviceClass: state.attributes.device_class || 'default',
+        areaId: state.attributes?.area_id || null
+      }));
+    
+    return devices;
+  } catch (error) {
+    console.error('Error fetching all devices:', error);
     throw error;
   }
 };

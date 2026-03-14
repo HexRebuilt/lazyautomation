@@ -601,6 +601,26 @@ body {
   color: var(--text-secondary);
 }
 
+/* Dashboard Sections */
+.dashboard-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 12px 0 8px 0;
+  color: var(--text-secondary);
+}
+
+.room-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.room-section {
+  background-color: var(--background-color);
+  border-radius: 8px;
+  padding: 12px;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .home-layout {
