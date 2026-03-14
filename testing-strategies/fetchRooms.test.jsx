@@ -139,9 +139,9 @@ describe('fetchRooms', () => {
 
   it('sorts rooms alphabetically', async () => {
     const mockStates = [
-      { entity_id: 'light.z_room', attributes: {} },
-      { entity_id: 'light.a_room', attributes: {} },
-      { entity_id: 'light.m_room', attributes: {} },
+      { entity_id: 'light.z_soggiorno', attributes: {} },
+      { entity_id: 'light.a_cucina', attributes: {} },
+      { entity_id: 'light.m_bagno', attributes: {} },
     ];
 
     global.fetch.mockResolvedValueOnce({
@@ -157,8 +157,8 @@ describe('fetchRooms', () => {
     const rooms = await fetchRooms();
 
     expect(rooms).toHaveLength(3);
-    expect(rooms[0].id).toBe('a_room');
-    expect(rooms[1].id).toBe('m_room');
-    expect(rooms[2].id).toBe('z_room');
+    expect(rooms[0].id).toBe('cucina');
+    expect(rooms[1].id).toBe('bagno');
+    expect(rooms[2].id).toBe('soggiorno');
   });
 });

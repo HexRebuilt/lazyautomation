@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { llmService } from '../services/llm.jsx';
+import ModelSelector from './ModelSelector.jsx';
+import { useSettings } from '../context/SettingsContext.jsx';
 
 const AIPanel = ({ room, sensors, appliances, automations, allSensors, allAppliances }) => {
+  const { settings, updateSettings } = useSettings();
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
@@ -65,6 +68,13 @@ const AIPanel = ({ room, sensors, appliances, automations, allSensors, allApplia
       <div className="ai-panel-header">
         <h3>AI Assistant</h3>
         {room && <span className="ai-room-context">Room: {room.name}</span>}
+      </div>
+      
+      <div className="ai-model-selector">
+        <ModelSelector
+          selectedModel={settings.selectedModel}
+          onModelSelect={(model) => updateSettings({ selectedModel: model })}
+        />
       </div>
 
       <div className="ai-tabs">

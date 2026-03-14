@@ -843,3 +843,28 @@ body {
   font-size: 12px;
   margin-top: 4px;
 }
+
+/* AI Panel Model Selector */
+.ai-model-selector {
+  padding: 12px;
+  background-color: var(--card-background);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ai-model-selector .model-selector-header {
+  margin-bottom: 8px;
+}
+
+.ai-model-selector .model-selector-header label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ai-model-selector .server-status {
+  font-size: 11px;
+}
+
+.ai-model-selector select {
+  font-size: 13px;
+  padding: 8px 10px;
+}
