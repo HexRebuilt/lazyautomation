@@ -22,7 +22,14 @@ const llmFetch = async (endpoint, options = {}) => {
     headers['Authorization'] = `Bearer ${config.apiKey}`;
   }
   
-  const targetUrl = `${baseUrl}${endpoint}`;
+  // Handle URL construction to avoid duplicate /v1
+  // If baseUrl ends with /v1 and endpoint starts with /v1, remove /v1 from endpoint
+  let finalEndpoint = endpoint;
+  if (baseUrl.endsWith('/v1') && endpoint.startsWith('/v1/')) {
+    finalEndpoint = endpoint.substring(3); // Remove /v1 from endpoint
+  }
+  
+  const targetUrl = `${baseUrl}${finalEndpoint}`;
   const proxyUrl = `/api/proxy/${encodeURIComponent(targetUrl)}`;
   console.log('[LLM] Fetching:', proxyUrl);
   
@@ -56,7 +63,9 @@ export const getLLMModels = async () => {
     
     if (isOpenAICompatible(baseUrl)) {
       // OpenAI-compatible endpoint (LMStudio, OpenAI, etc.)
-      const data = await llmFetch('/v1/models');
+      // If baseUrl ends with /v1, use /models endpoint, otherwise use /v1/models
+      const endpoint = baseUrl.endsWith('/v1') ? '/models' : '/v1/models';
+      const data = await llmFetch(endpoint);
       return data.data || [];
     } else {
       // Native Ollama
@@ -72,6 +81,19 @@ export const getLLMModels = async () => {
 // Check connection to LLM provider
 export const checkLLMConnection = async () => {
   try {
+    const config = getLLMConfig();
+    
+    let baseUrl = config.apiUrl;
+    if (!baseUrl || config.useLocalApi) {
+      const ollamaConfig = getOllamaConfig();
+      baseUrl = ollamaConfig.host;
+    }
+    
+    if (!baseUrl) {
+      return { connected: false, models: [], error: 'LLM API URL not configured' };
+    }
+    
+    // Try to fetch models
     const models = await getLLMModels();
     return { connected: models.length > 0, models, error: null };
   } catch (error) {
@@ -97,7 +119,9 @@ export const sendChatMessage = async (messages, options = {}) => {
   
   if (isOpenAICompatible(baseUrl)) {
     // OpenAI-compatible chat completion
-    const response = await llmFetch('/v1/chat/completions', {
+    // If baseUrl ends with /v1, use /chat/completions endpoint, otherwise use /v1/chat/completions
+    const endpoint = baseUrl.endsWith('/v1') ? '/chat/completions' : '/v1/chat/completions';
+    const response = await llmFetch(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         model: config.model || 'default',
@@ -142,7 +166,9 @@ export const sendPrompt = async (prompt, options = {}) => {
   
   if (isOpenAICompatible(baseUrl)) {
     // OpenAI-compatible completion
-    const response = await llmFetch('/v1/completions', {
+    // If baseUrl ends with /v1, use /completions endpoint, otherwise use /v1/completions
+    const endpoint = baseUrl.endsWith('/v1') ? '/completions' : '/v1/completions';
+    const response = await llmFetch(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         model: config.model || 'default',
@@ -294,7 +320,9 @@ ${allAppliances.map(a => `- ${a.name} (${a.entityId}): ${a.state} (${a.type})`).
       }
       
       if (isOpenAICompatible(baseUrl)) {
-        const response = await llmFetch('/v1/embeddings', {
+        // If baseUrl ends with /v1, use /embeddings endpoint, otherwise use /v1/embeddings
+        const endpoint = baseUrl.endsWith('/v1') ? '/embeddings' : '/v1/embeddings';
+        const response = await llmFetch(endpoint, {
           method: 'POST',
           body: JSON.stringify({
             model: 'text-embedding-ada-002',

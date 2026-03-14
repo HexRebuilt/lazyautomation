@@ -22,6 +22,10 @@ const hassFetch = async (endpoint, options = {}) => {
   
   const response = await fetch(proxyUrl, { headers });
   
+  if (!response) {
+    throw new Error('No response from server');
+  }
+  
   console.log('[HA Service] Response status:', response.status);
   
   if (!response.ok) {
