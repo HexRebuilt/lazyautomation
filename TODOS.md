@@ -63,8 +63,26 @@
         - [x] Support for English room names (living_room, kitchen, bedroom, etc.)
         - [x] Duplicate room names are handled correctly
         - [x] Rooms are sorted alphabetically
+        - [x] Home Assistant rooms are prioritized over fallback extraction
         
-        **Resolution**: Updated fetchRooms function to extract rooms from entity IDs as fallback when area_id is not available.
+        **Resolution**: Updated fetchRooms function to extract rooms from entity IDs as fallback only when no Home Assistant rooms are available.
+
+3. **AI Panel Model Selection:**
+    - [x] ## Task: Add Model Dropdown to AI Assistant Chat Section
+        **Goal**: Add model dropdown selector to AI Assistant panel for model selection during chat.
+        
+        **Files involved**:
+        - src/components/AIPanel.jsx: Updated to include ModelSelector component
+        - src/components/ModelSelector.jsx: Reused for AI panel
+        - src/styles/index.css: Added styles for AI panel model selector
+        
+        **Completion criteria**:
+        - [x] Model dropdown displays in AI Assistant panel
+        - [x] Server status indicator shows connection state
+        - [x] Selected model is saved to settings
+        - [x] Model selection is used in LLM API calls
+        
+        **Resolution**: Added ModelSelector component to AIPanel for model selection during chat.
 
 3. **Documentation:**
     - [x] Create a README.md file with project details.

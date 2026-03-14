@@ -10,9 +10,11 @@ All notable changes to this project will be documented in this file.
 - Fixed .env.example to use correct VITE_ prefix and include LLM API configuration
 - Fixed room selection by adding fallback to extract rooms from entity IDs when area_id is not available
 - Added support for Italian room names in entity ID extraction (soggiorno, cucina, camera_da_letto, etc.)
+- Prioritized Home Assistant rooms over fallback extraction (only uses entity ID fallback when no Home Assistant rooms are available)
 
 ### Added
 - Model dropdown selector in Settings with server status indicator
+- Model dropdown selector in AI Assistant chat section
 - Model selection functionality that persists to localStorage
 - Testing strategies folder with comprehensive test cases
 - ModelSelector component with connection status display
@@ -22,8 +24,9 @@ All notable changes to this project will be documented in this file.
 - Updated .env file to use VITE_ prefix for environment variables (required by Vite)
 - Updated SettingsContext.jsx to load environment variables from import.meta.env
 - Updated settings.js to load environment variables from import.meta.env
-- Updated fetchRooms function to extract rooms from entity IDs as fallback
+- Updated fetchRooms function to extract rooms from entity IDs as fallback only when no Home Assistant rooms are available
 - Added selectedModel field to settings for model persistence
+- Updated AIPanel to include ModelSelector component
 
 ### Security
 - Environment variables with VITE_ prefix are not exposed to client-side code (Vite only exposes VITE_ prefixed variables)
